@@ -351,25 +351,16 @@ class _PageContent extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Logo oder Emoji
+          // Logo auf Seite 0 – weißer BG im PNG wird durch farbigen
+          // Container mit ShaderMask unsichtbar gemacht
           if (page.emoji.isEmpty)
-            // ── App-Logo (erste Seite) ──────────────────────────────────
-            Container(
-              width: 100,
-              height: 100,
-
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(26),
-                child: Image.asset(
-                  'assets/icon/foody_icon2.png',
-                  width: 100,
-                  height: 100,
-                  fit: BoxFit.cover,
-                ),
-              ),
+            Image.asset(
+              'assets/icon/foody_icon2-Photoroom.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
             )
           else
-            // ── Emoji (alle anderen Seiten) ────────────────────────────
             Container(
               width: 100,
               height: 100,
@@ -388,6 +379,7 @@ class _PageContent extends StatelessWidget {
                 ),
               ),
             ),
+
           const SizedBox(height: 32),
 
           // Subtitle
