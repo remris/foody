@@ -21,6 +21,7 @@ import 'package:kokomi/widgets/main_shell.dart' show AppBarMoreButton;
 import 'package:kokomi/core/services/shopping_list_ocr_service.dart';
 import 'package:kokomi/core/data/ingredient_catalog.dart';
 import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomi/models/inventory_item.dart';
 import 'package:kokomi/models/shopping_list.dart';
 import 'package:kokomi/models/shopping_list_item.dart';
 import 'package:kokomi/widgets/skeleton_loader.dart';
@@ -38,6 +39,7 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
   final _controller = TextEditingController();
   bool _hideChecked = false;
   bool _groupedView = false;
+  bool _shoppingMode = false;
   late final ConfettiController _confettiController;
 
   @override
@@ -441,6 +443,92 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
     );
   }
 
+  Future<void> _completeList(List<ShoppingListItem> items) async {
+    final checked = items.where((e) => e.isChecked).toList();
+    final unchecked = items.where((e) => !e.isChecked).toList();
+
+    final result = await showModalBottomSheet<_CompleteAction>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => _CompleteListSheet(
+        totalItems: items.length,
+        checkedCount: checked.length,
+        uncheckedCount: unchecked.length,
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    if (result == _CompleteAction.transferAndClear) {
+      // Direkt ins Inventar übernehmen – KEIN zweites Sheet öffnen
+      if (checked.isNotEmpty) {
+        await _transferToInventoryDirect(checked);
+      }
+      // Gesamte Liste leeren
+      await ref.read(shoppingListProvider.notifier).clearAll();
+      if (mounted) setState(() => _shoppingMode = false);
+      return;
+    }
+
+    if (result == _CompleteAction.transfer) {
+      // Sheet öffnen (user will selbst wählen was übernommen wird)
+      if (checked.isNotEmpty && mounted) {
+        _showTransferSheet(context, checked);
+      }
+      if (mounted) setState(() => _shoppingMode = false);
+      return;
+    }
+
+    if (result == _CompleteAction.clearAll) {
+      await ref.read(shoppingListProvider.notifier).clearAll();
+      if (mounted) setState(() => _shoppingMode = false);
+    }
+  }
+
+  /// Überträgt Items direkt ins Inventar ohne zweites Sheet.
+  Future<void> _transferToInventoryDirect(List<ShoppingListItem> items) async {
+    final userId = ref.read(currentUserProvider)?.id ?? '';
+    for (final shopItem in items) {
+      final inventoryItem = InventoryItem(
+        id: '',
+        userId: userId,
+        ingredientId: DateTime.now().millisecondsSinceEpoch.toString(),
+        ingredientName: shopItem.name,
+        // quantity als double versuchen, Einheit im String behalten
+        quantity: _parseQuantityValue(shopItem.quantity),
+        unit: _parseQuantityUnit(shopItem.quantity),
+        createdAt: DateTime.now(),
+      );
+      await ref.read(inventoryProvider.notifier).addItem(inventoryItem);
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${items.length} Artikel ins Inventar übernommen ✅'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  /// Parst "100 g" → 100.0, "2 Stück" → 2.0, "100 gramm" → 100.0
+  double? _parseQuantityValue(String? qty) {
+    if (qty == null || qty.isEmpty) return null;
+    final match = RegExp(r'^\s*([\d.,]+)').firstMatch(qty);
+    if (match == null) return null;
+    return double.tryParse(match.group(1)!.replaceAll(',', '.'));
+  }
+
+  /// Parst "100 g" → "g", "2 Stück" → "Stück", "100" → null
+  String? _parseQuantityUnit(String? qty) {
+    if (qty == null || qty.isEmpty) return null;
+    final match = RegExp(r'^\s*[\d.,]+\s*(.*)$').firstMatch(qty);
+    final unit = match?.group(1)?.trim();
+    return (unit != null && unit.isNotEmpty) ? unit : null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final listsAsync = ref.watch(shoppingListsProvider);
@@ -466,140 +554,174 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
       children: [
         Scaffold(
       appBar: AppBar(
-        title: const Text('Einkaufsliste'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(kTextTabBarHeight),
-          child: ValueListenableBuilder<int>(
-            valueListenable: pantryTabNotifier,
-            builder: (_, tab, __) => PantryTabBar(currentTab: tab),
-          ),
-        ),
+        title: _shoppingMode
+            ? Row(children: [
+                const Icon(Icons.shopping_cart_rounded, size: 20),
+                const SizedBox(width: 8),
+                const Text('Einkaufsmodus'),
+              ])
+            : const Text('Einkaufsliste'),
+        backgroundColor:
+            _shoppingMode ? Theme.of(context).colorScheme.primaryContainer : null,
+        bottom: _shoppingMode
+            ? null
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(kTextTabBarHeight),
+                child: ValueListenableBuilder<int>(
+                  valueListenable: pantryTabNotifier,
+                  builder: (_, tab, __) => PantryTabBar(currentTab: tab),
+                ),
+              ),
         actions: [
-          // Liste teilen
-          itemsAsync.whenOrNull(
-                data: (items) => items.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.share_rounded),
-                        tooltip: 'Liste teilen',
-                        onPressed: () => _shareList(items),
-                      )
-                    : null,
-              ) ??
-              const SizedBox.shrink(),
-          // Erledigte ein-/ausblenden
-          itemsAsync.whenOrNull(
-                data: (items) => items.any((e) => e.isChecked)
-                    ? IconButton(
-                        icon: Icon(_hideChecked
-                            ? Icons.visibility_off_rounded
-                            : Icons.visibility_rounded),
-                        tooltip: _hideChecked
-                            ? 'Erledigte anzeigen'
-                            : 'Erledigte ausblenden',
-                        onPressed: () =>
-                            setState(() => _hideChecked = !_hideChecked),
-                      )
-                    : null,
-              ) ??
-              const SizedBox.shrink(),
-          // Gruppiert / Normal Ansicht
+          // Einkaufsmodus Toggle
           IconButton(
-            icon: Icon(_groupedView
-                ? Icons.view_list_rounded
-                : Icons.category_rounded),
-            tooltip: _groupedView
-                ? 'Normale Ansicht'
-                : 'Nach Kategorie gruppieren',
-            onPressed: () =>
-                setState(() => _groupedView = !_groupedView),
+            icon: Icon(_shoppingMode
+                ? Icons.close_rounded
+                : Icons.shopping_cart_checkout_rounded),
+            tooltip: _shoppingMode ? 'Einkaufsmodus beenden' : 'Einkaufsmodus',
+            onPressed: () => setState(() => _shoppingMode = !_shoppingMode),
           ),
-          // Ins Inventar übernehmen
-          itemsAsync.whenOrNull(
-                data: (items) {
-                  final checked = items.where((e) => e.isChecked).toList();
-                  return checked.isNotEmpty
+          if (!_shoppingMode) ...[
+            // Erledigte ein-/ausblenden (bleibt direkt sichtbar – oft benötigt)
+            itemsAsync.whenOrNull(
+                  data: (items) => items.any((e) => e.isChecked)
                       ? IconButton(
-                          icon: const Icon(Icons.move_to_inbox_rounded),
-                          tooltip: 'Ins Inventar übernehmen',
-                          onPressed: () => _showTransferSheet(context, checked),
+                          icon: Icon(_hideChecked
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded),
+                          tooltip: _hideChecked
+                              ? 'Erledigte anzeigen'
+                              : 'Erledigte ausblenden',
+                          onPressed: () =>
+                              setState(() => _hideChecked = !_hideChecked),
                         )
-                      : null;
-                },
-              ) ??
-              const SizedBox.shrink(),
-          // Erledigte löschen
-          itemsAsync.whenOrNull(
-                data: (items) => items.any((e) => e.isChecked)
-                    ? IconButton(
-                        icon: const Icon(Icons.delete_sweep),
-                        tooltip: 'Erledigte löschen',
-                        onPressed: () => ref
-                            .read(shoppingListProvider.notifier)
-                            .clearChecked(),
-                      )
-                    : null,
-              ) ??
-              const SizedBox.shrink(),
-          // Templates
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.file_copy_outlined),
-            tooltip: 'Vorlagen',
-            onSelected: (action) {
-              if (action == 'save') {
-                _showSaveTemplateDialog();
-              } else if (action == 'load') {
-                _showLoadTemplateSheet();
-              } else if (action == 'stats') {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      : null,
+                ) ??
+                const SizedBox.shrink(),
+            // Gruppenansicht
+            IconButton(
+              icon: Icon(_groupedView
+                  ? Icons.view_list_rounded
+                  : Icons.category_rounded),
+              tooltip: _groupedView ? 'Normale Ansicht' : 'Nach Kategorie',
+              onPressed: () => setState(() => _groupedView = !_groupedView),
+            ),
+            // Neue Liste erstellen
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              tooltip: 'Neue Liste',
+              onPressed: _showCreateListDialog,
+            ),
+            // Alles weitere ins Dot-Menü
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (action) {
+                switch (action) {
+                  case 'share':
+                    itemsAsync.whenData((items) => _shareList(items));
+                  case 'transfer':
+                    itemsAsync.whenData((items) {
+                      final checked = items.where((e) => e.isChecked).toList();
+                      if (checked.isNotEmpty) _showTransferSheet(context, checked);
+                    });
+                  case 'clear_checked':
+                    ref.read(shoppingListProvider.notifier).clearChecked();
+                  case 'template_save':
+                    _showSaveTemplateDialog();
+                  case 'template_load':
+                    _showLoadTemplateSheet();
+                  case 'stats':
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      builder: (_) => const ShoppingStatsSheet(),
+                    );
+                }
+              },
+              itemBuilder: (_) {
+                final items = itemsAsync.valueOrNull ?? [];
+                final hasChecked = items.any((e) => e.isChecked);
+                return [
+                  PopupMenuItem(
+                    value: 'share',
+                    enabled: items.isNotEmpty,
+                    child: const ListTile(
+                      leading: Icon(Icons.share_rounded),
+                      title: Text('Liste teilen'),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
-                  builder: (_) => const ShoppingStatsSheet(),
-                );
-              }
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'save',
-                child: ListTile(
-                  leading: Icon(Icons.save_outlined),
-                  title: Text('Als Vorlage speichern'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'load',
-                child: ListTile(
-                  leading: Icon(Icons.file_open_outlined),
-                  title: Text('Vorlage laden'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'stats',
-                child: ListTile(
-                  leading: Icon(Icons.bar_chart_rounded),
-                  title: Text('Statistiken'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
-          ),
-          // Neue Liste erstellen
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            tooltip: 'Neue Liste',
-            onPressed: _showCreateListDialog,
-          ),
-          const AppBarMoreButton(),
+                  PopupMenuItem(
+                    value: 'transfer',
+                    enabled: hasChecked,
+                    child: ListTile(
+                      leading: Icon(Icons.move_to_inbox_rounded,
+                          color: hasChecked ? null : Colors.grey),
+                      title: Text('Ins Inventar übernehmen',
+                          style: TextStyle(color: hasChecked ? null : Colors.grey)),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'clear_checked',
+                    enabled: hasChecked,
+                    child: ListTile(
+                      leading: Icon(Icons.delete_sweep,
+                          color: hasChecked ? Colors.red : Colors.grey),
+                      title: Text('Erledigte löschen',
+                          style: TextStyle(
+                              color: hasChecked ? Colors.red : Colors.grey)),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'template_save',
+                    child: ListTile(
+                      leading: Icon(Icons.save_outlined),
+                      title: Text('Als Vorlage speichern'),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'template_load',
+                    child: ListTile(
+                      leading: Icon(Icons.file_open_outlined),
+                      title: Text('Vorlage laden'),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'stats',
+                    child: ListTile(
+                      leading: Icon(Icons.bar_chart_rounded),
+                      title: Text('Statistiken'),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ];
+              },
+            ),
+            const AppBarMoreButton(),
+          ], // Ende !_shoppingMode
         ],
       ),
-      body: Column(
+      body: _shoppingMode
+          ? _ShoppingModeBody(
+              itemsAsync: itemsAsync,
+              onComplete: () => itemsAsync.whenData(
+                  (items) => _completeList(items)),
+            )
+          : Column(
         children: [
           // Listen-Tabs
           listsAsync.when(
@@ -1010,7 +1132,7 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
             },
           ),
         ],
-      ),
+      ), // Ende Column (normal mode)
     ),
         // Konfetti-Overlay
         Align(
@@ -2247,3 +2369,429 @@ class _PhotoOcrResultSheetState extends State<_PhotoOcrResultSheet> {
   }
 }
 
+// ─── Einkaufsmodus-Body ───────────────────────────────────────────────────────
+
+enum _CompleteAction { transfer, clearAll, transferAndClear }
+
+class _ShoppingModeBody extends ConsumerStatefulWidget {
+  final AsyncValue itemsAsync;
+  final VoidCallback onComplete;
+
+  const _ShoppingModeBody({
+    required this.itemsAsync,
+    required this.onComplete,
+  });
+
+  @override
+  ConsumerState<_ShoppingModeBody> createState() => _ShoppingModeBodyState();
+}
+
+class _ShoppingModeBodyState extends ConsumerState<_ShoppingModeBody> {
+  bool _grouped = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return widget.itemsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('$e')),
+      data: (rawItems) {
+        final items = rawItems as List<ShoppingListItem>;
+        final unchecked = items.where((i) => !i.isChecked).toList();
+        final checked = items.where((i) => i.isChecked).toList();
+        final progress = items.isEmpty ? 0.0 : checked.length / items.length;
+
+        return Column(
+          children: [
+            // Fortschrittsleiste
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${checked.length} von ${items.length} erledigt',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            '${(progress * 100).toInt()}%',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Kategorie-Toggle
+                          IconButton(
+                            icon: Icon(
+                              _grouped
+                                  ? Icons.view_list_rounded
+                                  : Icons.category_rounded,
+                              size: 20,
+                            ),
+                            tooltip: _grouped
+                                ? 'Normale Ansicht'
+                                : 'Nach Kategorie',
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () =>
+                                setState(() => _grouped = !_grouped),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 8,
+                      backgroundColor:
+                          theme.colorScheme.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation(
+                          theme.colorScheme.primary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Liste
+            Expanded(
+              child: _grouped
+                  ? _buildGroupedShoppingMode(context, theme, unchecked, checked)
+                  : ListView(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      children: [
+                        if (unchecked.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+                            child: Text(
+                              'Noch zu kaufen (${unchecked.length})',
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          ...unchecked.map(
+                              (item) => _ShoppingModeItem(item: item)),
+                        ],
+                        if (checked.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+                            child: Row(
+                              children: [
+                                Icon(Icons.check_circle_rounded,
+                                    size: 16,
+                                    color: theme.colorScheme.primary),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Im Korb (${checked.length})',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ...checked
+                              .map((item) => _ShoppingModeItem(item: item)),
+                        ],
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+            ),
+            // Bottom-Bar: Abschließen
+            Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: FilledButton.icon(
+                    onPressed: items.isNotEmpty ? widget.onComplete : null,
+                    icon: const Icon(Icons.check_circle_rounded),
+                    label: const Text(
+                      'Einkauf abschließen',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildGroupedShoppingMode(
+    BuildContext context,
+    ThemeData theme,
+    List<ShoppingListItem> unchecked,
+    List<ShoppingListItem> checked,
+  ) {
+    // Kategorie-Zuordnung aus shopping_category.dart nutzen
+    final Map<String, List<ShoppingListItem>> groups = {};
+    for (final item in unchecked) {
+      final cat = ShoppingCategory.categorize(item.name).name;
+      groups.putIfAbsent(cat, () => []).add(item);
+    }
+    final sortedCats = groups.keys.toList()..sort();
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      children: [
+        ...sortedCats.map((cat) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
+                  child: Text(
+                    cat,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                ...groups[cat]!.map((item) => _ShoppingModeItem(item: item)),
+              ],
+            )),
+        if (checked.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle_rounded,
+                    size: 16, color: theme.colorScheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Im Korb (${checked.length})',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...checked.map((item) => _ShoppingModeItem(item: item)),
+        ],
+        const SizedBox(height: 100),
+      ],
+    );
+  }
+}
+
+class _ShoppingModeItem extends ConsumerWidget {
+  final ShoppingListItem item;
+
+  const _ShoppingModeItem({required this.item});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isChecked = item.isChecked;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      color: isChecked
+          ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+          : theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isChecked
+              ? theme.colorScheme.primary.withValues(alpha: 0.3)
+              : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          ref
+              .read(shoppingListProvider.notifier)
+              .toggleChecked(item.id, !isChecked);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isChecked
+                      ? theme.colorScheme.primary
+                      : Colors.transparent,
+                  border: isChecked
+                      ? null
+                      : Border.all(
+                          color: theme.colorScheme.outline,
+                          width: 2,
+                        ),
+                ),
+                child: isChecked
+                    ? const Icon(Icons.check_rounded,
+                        size: 18, color: Colors.white)
+                    : null,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        decoration: isChecked
+                            ? TextDecoration.lineThrough
+                            : null,
+                        color: isChecked
+                            ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
+                            : null,
+                      ),
+                    ),
+                    if (item.quantity != null && item.quantity!.isNotEmpty)
+                      Text(
+                        item.quantity!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (isChecked)
+                Icon(Icons.shopping_cart_rounded,
+                    size: 18,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.6)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompleteListSheet extends StatelessWidget {
+  final int totalItems;
+  final int checkedCount;
+  final int uncheckedCount;
+
+  const _CompleteListSheet({
+    required this.totalItems,
+    required this.checkedCount,
+    required this.uncheckedCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final allDone = uncheckedCount == 0;
+
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+            24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Icon(
+              allDone
+                  ? Icons.celebration_rounded
+                  : Icons.shopping_cart_checkout_rounded,
+              size: 48,
+              color: allDone ? Colors.amber : theme.colorScheme.primary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              allDone ? 'Alles erledigt! 🎉' : 'Einkauf abschließen',
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              allDone
+                  ? '$checkedCount Artikel im Korb. Möchtest du sie in deinen Vorrat übernehmen?'
+                  : '$checkedCount von $totalItems Artikeln erledigt.\nNoch $uncheckedCount offen.',
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            if (checkedCount > 0) ...[
+              FilledButton.icon(
+                onPressed: () =>
+                    Navigator.pop(context, _CompleteAction.transferAndClear),
+                icon: const Icon(Icons.move_to_inbox_rounded),
+                label: Text(
+                    'In Vorrat übernehmen & leeren ($checkedCount)'),
+                style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48)),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () =>
+                    Navigator.pop(context, _CompleteAction.transfer),
+                icon: const Icon(Icons.move_to_inbox_outlined),
+                label: Text('Nur in Vorrat übernehmen ($checkedCount)'),
+                style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44)),
+              ),
+              const SizedBox(height: 8),
+            ],
+            OutlinedButton.icon(
+              onPressed: () =>
+                  Navigator.pop(context, _CompleteAction.clearAll),
+              icon: const Icon(Icons.delete_sweep_rounded,
+                  color: Colors.red),
+              label: const Text('Liste komplett leeren',
+                  style: TextStyle(color: Colors.red)),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(44),
+                side: const BorderSide(color: Colors.red),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Abbrechen'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

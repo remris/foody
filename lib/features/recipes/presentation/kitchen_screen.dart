@@ -23,6 +23,7 @@ import 'package:kokomi/widgets/main_shell.dart' show AppBarMoreButton;
 import 'package:kokomi/features/shopping_list/presentation/shopping_list_provider.dart';
 import 'package:kokomi/widgets/meal_plan_picker_sheet.dart';
 import 'package:kokomi/features/recipes/presentation/recipe_detail_screen.dart';
+import 'package:kokomi/core/constants/staple_ingredients.dart';
 
 class KitchenScreen extends ConsumerStatefulWidget {
   final int initialTab; // 0=Gespeichert, 1=Wochenplan
@@ -593,6 +594,8 @@ class _GenerateTabState extends ConsumerState<_GenerateTab> {
     ('🍕', 'Comfort Food'),
     ('🌶️', 'Scharf'),
     ('🎉', 'Festlich'),
+    ('🌀', 'Airfryer'),
+    ('🥘', 'OnePot'),
   ];
 
   @override
@@ -1287,13 +1290,40 @@ void _showAddToMealPlan(BuildContext context, WidgetRef ref, FoodRecipe recipe) 
 }
 
 void _showAddToShoppingList(BuildContext context, WidgetRef ref, FoodRecipe recipe) {
-  final items = recipe.ingredients.map((i) => '${i.amount} ${i.name}'.trim()).toList();
-  for (final item in items) {
-    ref.read(shoppingListProvider.notifier).addItem(item);
+  final inventoryItems = ref.read(inventoryProvider).valueOrNull ?? [];
+  final inventoryNames = inventoryItems.map((e) => e.ingredientName.toLowerCase()).toSet();
+
+  // Vorselektiert: Zutaten die nicht im Vorrat und keine Basis-Zutaten sind
+  final preSelected = <String>{};
+  for (final ing in recipe.ingredients) {
+    if (!inventoryNames.contains(ing.name.toLowerCase()) &&
+        !isStapleIngredient(ing.name)) {
+      preSelected.add(ing.name);
+    }
   }
-  HapticFeedback.lightImpact();
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text('${items.length} Zutaten zur Einkaufsliste hinzugefügt ✅')),
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (ctx) => _KitchenShoppingSheet(
+      recipe: recipe,
+      preSelected: preSelected,
+      onConfirm: (selected) {
+        for (final name in selected) {
+          final ing = recipe.ingredients.firstWhere((i) => i.name == name,
+              orElse: () => RecipeIngredient(name: name, amount: ''));
+          ref.read(shoppingListProvider.notifier).addItem(ing.name, quantity: ing.amount);
+        }
+        HapticFeedback.lightImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${selected.length} Zutaten zur Einkaufsliste hinzugefügt ✅')),
+        );
+      },
+    ),
   );
 }
 
@@ -1398,6 +1428,142 @@ class _DifficultyBadge extends StatelessWidget {
         difficulty,
         style:
             TextStyle(color: _color(), fontSize: 11, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+
+// ─── Shopping-Auswahl-Sheet für Küche ────────────────────────────────────────
+
+class _KitchenShoppingSheet extends StatefulWidget {
+  final FoodRecipe recipe;
+  final Set<String> preSelected;
+  final ValueChanged<List<String>> onConfirm;
+  const _KitchenShoppingSheet({
+    required this.recipe,
+    required this.preSelected,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_KitchenShoppingSheet> createState() => _KitchenShoppingSheetState();
+}
+
+class _KitchenShoppingSheetState extends State<_KitchenShoppingSheet> {
+  late final Set<String> _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = Set.from(widget.preSelected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ingredients = widget.recipe.ingredients;
+    final maxHeight = MediaQuery.of(context).size.height * 0.85;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20, right: 20, top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Zutaten einkaufen',
+                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                      Text(widget.recipe.title,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => setState(() {
+                    if (_selected.length == ingredients.length) {
+                      _selected.clear();
+                    } else {
+                      _selected.addAll(ingredients.map((i) => i.name));
+                    }
+                  }),
+                  child: Text(_selected.length == ingredients.length ? 'Keine' : 'Alle'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: ingredients.map((ing) {
+                  final isSelected = _selected.contains(ing.name);
+                  final isStaple = isStapleIngredient(ing.name);
+                  return CheckboxListTile(
+                    value: isSelected,
+                    title: Row(
+                      children: [
+                        Expanded(child: Text(ing.name)),
+                        if (isStaple)
+                          Container(
+                            margin: const EdgeInsets.only(left: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'vorrätig',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green.shade700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    subtitle: ing.amount.isNotEmpty
+                        ? Text(ing.amount,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant))
+                        : null,
+                    dense: true,
+                    onChanged: (val) => setState(() {
+                      val == true ? _selected.add(ing.name) : _selected.remove(ing.name);
+                    }),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _selected.isEmpty
+                  ? null
+                  : () {
+                      widget.onConfirm(_selected.toList());
+                      Navigator.of(context).pop();
+                    },
+              icon: const Icon(Icons.add_shopping_cart),
+              label: Text('${_selected.length} Zutaten hinzufügen'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Abbrechen'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -87,10 +87,12 @@ class GroqService {
     _techniques.shuffle(_rng);
     _mealTypes.shuffle(_rng);
 
-    // Nimm 3 verschiedene Küchen damit die 3 Rezepte wirklich different sind
+    // Nimm 5 verschiedene Küchen damit die 5 Rezepte wirklich different sind
     final cuisine1 = _cuisines[0];
     final cuisine2 = _cuisines[1];
     final cuisine3 = _cuisines[2];
+    final cuisine4 = _cuisines[3];
+    final cuisine5 = _cuisines[4];
     final style = _styles.first;
     final technique = _techniques.first;
     final mealType = _mealTypes.first;
@@ -102,18 +104,20 @@ class GroqService {
         : '';
 
     return 'UNIQUE-SEED: $seed-$ts\n'
-        'Erstelle EXAKT 3 Rezepte – jedes aus einer ANDEREN Küche:\n'
+        'Erstelle EXAKT 5 Rezepte – jedes aus einer ANDEREN Küche:\n'
         '  Rezept 1: $cuisine1-Küche, Stil: $style\n'
         '  Rezept 2: $cuisine2-Küche, Technik: $technique\n'
         '  Rezept 3: $cuisine3-Küche, Typ: $mealType\n'
-        'Wichtig: ALLE 3 müssen sich stark voneinander unterscheiden!\n'
+        '  Rezept 4: $cuisine4-Küche\n'
+        '  Rezept 5: $cuisine5-Küche\n'
+        'Wichtig: ALLE 5 müssen sich stark voneinander unterscheiden!\n'
         'Vermeide diese Klischée-Rezepte: Pasta Bolognese, Schnitzel, Rührei, '
         'Tomatensuppe, Spaghetti Carbonara, Pfannkuchen, Omelett, Avocado-Toast.'
         '$avoidSection';
   }
 
   Future<String> generateRecipes(List<String> ingredients) => _send('''
-Du bist ein kreativer Koch-Assistent. Schlage 3 VERSCHIEDENE Rezepte vor, die mit folgenden Zutaten gekocht werden können.
+Du bist ein kreativer Koch-Assistent. Schlage 5 VERSCHIEDENE Rezepte vor, die mit folgenden Zutaten gekocht werden können.
 ${_randomHint()}
 Antworte NUR im folgenden JSON-Format ohne Markdown-Codeblöcke:
 $_jsonFormat
@@ -124,7 +128,7 @@ Vorhandene Zutaten: ${ingredients.join(', ')}
   Future<String> generateRecipesFromPrompt(String userPrompt) => _send('''
 Du bist ein kreativer Koch-Assistent. Der Benutzer möchte folgendes: "$userPrompt"
 ${_randomHint()}
-Schlage 3 passende, ABWECHSLUNGSREICHE Rezepte vor.
+Schlage 5 passende, ABWECHSLUNGSREICHE Rezepte vor.
 Antworte NUR im folgenden JSON-Format ohne Markdown-Codeblöcke:
 $_jsonFormat
 ''');
@@ -134,7 +138,7 @@ $_jsonFormat
     String? additionalPrompt,
   }) =>
       _send('''
-Du bist ein kreativer Koch-Assistent. Schlage 3 KREATIVE und VERSCHIEDENE Rezepte vor, die hauptsächlich diese Zutaten verwenden.
+Du bist ein kreativer Koch-Assistent. Schlage 5 KREATIVE und VERSCHIEDENE Rezepte vor, die hauptsächlich diese Zutaten verwenden.
 ${_randomHint()}
 Antworte NUR im folgenden JSON-Format ohne Markdown-Codeblöcke:
 $_jsonFormat
@@ -150,7 +154,7 @@ Zutaten: ${ingredients.join(', ')}${additionalPrompt != null ? '\nWunsch: $addit
 
   /// Generiert Meal-Prep Rezepte die sich gut vorkochen lassen.
   Future<String> generateMealPrepRecipes(List<String> ingredients) => _send('''
-Du bist ein Meal-Prep-Experte. Schlage 3 Rezepte vor, die sich perfekt zum Vorkochen für die ganze Woche eignen.
+Du bist ein Meal-Prep-Experte. Schlage 5 Rezepte vor, die sich perfekt zum Vorkochen für die ganze Woche eignen.
 ${_randomHint()}
 Die Rezepte sollten:
 - Gut 3-5 Tage im Kühlschrank haltbar sein

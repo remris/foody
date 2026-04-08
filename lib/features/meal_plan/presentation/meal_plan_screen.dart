@@ -69,71 +69,115 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                   tooltip: 'KI-Wochenplan generieren',
                   onPressed: _generateAiPlan,
                 ),
-        IconButton(
-          icon: const Icon(Icons.add_rounded),
-          tooltip: 'Neuen Plan erstellen',
-          onPressed: () => context.push('/kitchen/meal-plan/new'),
+        // ── Neuer Plan: nur Pro ──
+        Tooltip(
+          message: isPro ? 'Neuen Plan erstellen' : '⭐ Pro: Neuen Plan erstellen',
+          child: IconButton(
+            icon: Icon(Icons.add_rounded,
+                color: isPro ? null : Theme.of(context).disabledColor),
+            onPressed: isPro
+                ? () => context.push('/kitchen/meal-plan/new')
+                : () => _showProHint(context),
+          ),
         ),
-        IconButton(
-          icon: const Icon(Icons.folder_open_outlined),
-          tooltip: 'Pläne & Vorlagen laden',
-          onPressed: _loadTemplate,
+        // ── Pläne & Vorlagen: nur Pro ──
+        Tooltip(
+          message: isPro ? 'Pläne & Vorlagen laden' : '⭐ Pro: Pläne & Vorlagen laden',
+          child: IconButton(
+            icon: Icon(Icons.folder_open_outlined,
+                color: isPro ? null : Theme.of(context).disabledColor),
+            onPressed: isPro ? _loadTemplate : () => _showProHint(context),
+          ),
         ),
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert),
-          onSelected: (action) {
-            if (action == 'shopping') _addToShoppingList();
-            if (action == 'save_template') _saveAsTemplate();
-            if (action == 'share') _sharePlan();
-            if (action == 'clear') _confirmClearPlan();
-            if (action == 'pdf') _exportAsPdf();
-            if (action == 'share_community') _shareToCommunity();
-          },
-          itemBuilder: (_) => const [
-            PopupMenuItem(
-              value: 'shopping',
-              child: ListTile(
-                  leading: Icon(Icons.add_shopping_cart),
-                  title: Text('Zutaten einkaufen'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero),
+        // ── Drei-Punkte-Menü: bei Non-Pro komplett ausgegraut ──
+        if (isPro)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (action) {
+              if (action == 'shopping') _addToShoppingList();
+              if (action == 'save_template') _saveAsTemplate();
+              if (action == 'share') _sharePlan();
+              if (action == 'clear') _confirmClearPlan();
+              if (action == 'pdf') _exportAsPdf();
+              if (action == 'share_community') _shareToCommunity();
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'shopping',
+                child: ListTile(
+                    leading: Icon(Icons.add_shopping_cart),
+                    title: Text('Zutaten einkaufen'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero),
+              ),
+              const PopupMenuItem(
+                value: 'share',
+                child: ListTile(
+                    leading: Icon(Icons.share_rounded),
+                    title: Text('Plan teilen'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero),
+              ),
+              const PopupMenuItem(
+                value: 'pdf',
+                child: ListTile(
+                    leading: Icon(Icons.picture_as_pdf_outlined),
+                    title: Text('Als PDF exportieren'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero),
+              ),
+              const PopupMenuItem(
+                value: 'save_template',
+                child: ListTile(
+                    leading: Icon(Icons.bookmark_add_outlined),
+                    title: Text('Als Plan speichern'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero),
+              ),
+              const PopupMenuItem(
+                value: 'share_community',
+                child: ListTile(
+                    leading: Icon(Icons.cloud_upload_outlined),
+                    title: Text('In Community teilen'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero),
+              ),
+              const PopupMenuItem(
+                value: 'clear',
+                child: ListTile(
+                    leading: Icon(Icons.delete_sweep, color: Colors.red),
+                    title: Text('Plan leeren',
+                        style: TextStyle(color: Colors.red)),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero),
+              ),
+            ],
+          )
+        else
+          Tooltip(
+            message: '⭐ Pro: Weitere Optionen',
+            child: IconButton(
+              icon: Icon(Icons.more_vert,
+                  color: Theme.of(context).disabledColor),
+              onPressed: () => _showProHint(context),
             ),
-            PopupMenuItem(
-              value: 'share',
-              child: ListTile(
-                  leading: Icon(Icons.share_rounded),
-                  title: Text('Plan teilen'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero),
-            ),
-            PopupMenuItem(
-              value: 'pdf',
-              child: ListTile(
-                  leading: Icon(Icons.picture_as_pdf_outlined),
-                  title: Text('Als PDF exportieren'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero),
-            ),
-            PopupMenuItem(
-              value: 'save_template',
-              child: ListTile(
-                  leading: Icon(Icons.bookmark_add_outlined),
-                  title: Text('Als Plan speichern'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero),
-            ),
-            PopupMenuItem(
-              value: 'clear',
-              child: ListTile(
-                  leading: Icon(Icons.delete_sweep, color: Colors.red),
-                  title: Text('Plan leeren',
-                      style: TextStyle(color: Colors.red)),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero),
-            ),
-          ],
-        ),
+          ),
       ];
+
+  void _showProHint(BuildContext context) {
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('⭐ Diese Funktion ist nur mit Pro verfügbar.'),
+          action: SnackBarAction(
+            label: 'Pro holen',
+            onPressed: () => context.push('/settings/paywall'),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+  }
 
   @override
   Widget build(BuildContext context) {

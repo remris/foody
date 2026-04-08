@@ -16,6 +16,8 @@ import 'package:kokomi/models/community_meal_plan.dart';
 import 'package:kokomi/models/community_recipe.dart';
 import 'package:kokomi/models/user_profile.dart';
 import 'package:kokomi/widgets/main_shell.dart' show AppBarMoreButton;
+import 'package:kokomi/models/feed_item.dart';
+import 'package:kokomi/features/profile/presentation/following_feed_screen.dart' show PostFeedCard;
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -32,7 +34,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this)
+    _tabController = TabController(length: 3, vsync: this)
       ..addListener(() {
         if (!_tabController.indexIsChanging) {
           setState(() => _segment = _tabController.index);
@@ -64,7 +66,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
-            expandedHeight: 300,
+            expandedHeight: 240,
             floating: false,
             pinned: true,
             snap: false,
@@ -76,11 +78,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             ),
             actions: [
               IconButton(
+                icon: const Icon(Icons.person_outline_rounded),
+                tooltip: 'Mein Profil ansehen',
+                onPressed: () {
+                  final uid = ref.read(currentUserProvider)?.id;
+                  if (uid != null) context.push('/profile/$uid');
+                },
+              ),
+              IconButton(
                 icon: const Icon(Icons.settings_outlined),
                 tooltip: 'Einstellungen',
                 onPressed: () => context.push('/settings'),
               ),
-              const AppBarMoreButton(),
             ],
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.pin,
@@ -88,153 +97,136 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 bottom: false,
                 child: Container(
                   color: theme.colorScheme.surfaceContainerLow,
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 58),
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 52),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        GestureDetector(
-                          onTap: () => context.push('/profile/edit'),
-                          child: Stack(
-                            children: [
-                              (profile?.avatarUrl?.isNotEmpty == true)
-                                  ? CircleAvatar(
-                                      radius: 30,
-                                      backgroundImage: NetworkImage(profile!.avatarUrl!),
-                                    )
-                                  : CircleAvatar(
-                                      radius: 30,
-                                      backgroundColor: isPro
-                                          ? const Color(0xFFFFB700).withValues(alpha: 0.3)
-                                          : theme.colorScheme.primaryContainer,
-                                      child: Text(initials,
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                            color: isPro
-                                                ? const Color(0xFFFF6B00)
-                                                : theme.colorScheme.onPrimaryContainer,
-                                          )),
-                                    ),
-                              Positioned(
-                                right: 0, bottom: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(3),
-                                  decoration: BoxDecoration(
-                                      color: theme.colorScheme.primary,
-                                      shape: BoxShape.circle),
-                                  child: Icon(Icons.edit_rounded,
-                                      size: 10, color: theme.colorScheme.onPrimary),
-                                ),
-                              ),
-                            ],
-                        ),
-                      ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(displayName,
-                                  style: theme.textTheme.titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                  overflow: TextOverflow.ellipsis),
-                              const SizedBox(height: 2),
-                              if (isPro)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                        colors: [Color(0xFFFFB700), Color(0xFFFF6B00)]),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Text('⭐ Pro',
-                                      style: TextStyle(
-                                          color: Colors.white, fontSize: 11,
-                                          fontWeight: FontWeight.bold)),
-                                )
-                              else
-                                TextButton.icon(
-                                  onPressed: () => context.push('/settings/paywall'),
-                                  icon: const Icon(Icons.star_outline_rounded, size: 13),
-                                  label: const Text('Auf Pro upgraden'),
-                                  style: TextButton.styleFrom(
-                                      padding: EdgeInsets.zero,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                                ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined),
-                          tooltip: 'Profil bearbeiten',
-                          onPressed: () => context.push('/profile/edit'),
-                        ),
-                      ],
-                    ),
-                    if (profile?.bio.isNotEmpty == true) ...[
-                      const SizedBox(height: 8),
-                      Text(profile!.bio,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis),
-                    ],
-                    if (profile != null && !profile.socialLinks.isEmpty) ...[
-                      const SizedBox(height: 6),
-                      _SocialLinksRow(links: profile.socialLinks),
-                    ],
-                    if (profile != null) ...[
-                      const SizedBox(height: 8),
+                    children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          _StatChip(label: 'Rezepte', value: profile.recipeCount),
-                          const SizedBox(width: 6),
-                          _StatChip(
-                            label: 'Follower',
-                            value: profile.followerCount,
-                            onTap: () => context.push('/profile/${profile.id}/followers'),
+                          GestureDetector(
+                            onTap: () => context.push('/profile/edit'),
+                            child: Stack(
+                              children: [
+                                (profile?.avatarUrl?.isNotEmpty == true)
+                                    ? CircleAvatar(
+                                        radius: 30,
+                                        backgroundImage: NetworkImage(profile!.avatarUrl!),
+                                      )
+                                    : CircleAvatar(
+                                        radius: 30,
+                                        backgroundColor: isPro
+                                            ? const Color(0xFFFFB700).withValues(alpha: 0.3)
+                                            : theme.colorScheme.primaryContainer,
+                                        child: Text(initials,
+                                            style: TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                              color: isPro
+                                                  ? const Color(0xFFFF6B00)
+                                                  : theme.colorScheme.onPrimaryContainer,
+                                            )),
+                                      ),
+                                Positioned(
+                                  right: 0, bottom: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: BoxDecoration(
+                                        color: theme.colorScheme.primary,
+                                        shape: BoxShape.circle),
+                                    child: Icon(Icons.edit_rounded,
+                                        size: 10, color: theme.colorScheme.onPrimary),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(width: 6),
-                          _StatChip(
-                            label: 'Folgt',
-                            value: profile.followingCount,
-                            onTap: () => context.push('/profile/${profile.id}/following'),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(displayName,
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis),
+                                const SizedBox(height: 2),
+                                if (isPro)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                          colors: [Color(0xFFFFB700), Color(0xFFFF6B00)]),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Text('⭐ Pro',
+                                        style: TextStyle(
+                                            color: Colors.white, fontSize: 11,
+                                            fontWeight: FontWeight.bold)),
+                                  )
+                                else
+                                  TextButton.icon(
+                                    onPressed: () => context.push('/settings/paywall'),
+                                    icon: const Icon(Icons.star_outline_rounded, size: 13),
+                                    label: const Text('Auf Pro upgraden'),
+                                    style: TextButton.styleFrom(
+                                        padding: EdgeInsets.zero,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined),
+                            tooltip: 'Profil bearbeiten',
+                            onPressed: () => context.push('/profile/edit'),
                           ),
                         ],
                       ),
-                  ],
-                ],
+                      if (profile?.bio.isNotEmpty == true) ...[
+                        const SizedBox(height: 6),
+                        Text(profile!.bio,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis),
+                      ],
+                      if (profile != null && !profile.socialLinks.isEmpty) ...[
+                        const SizedBox(height: 4),
+                        _SocialLinksRow(links: profile.socialLinks),
+                      ],
+                      if (profile != null) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            _StatChip(label: 'Rezepte', value: profile.recipeCount),
+                            const SizedBox(width: 6),
+                            _StatChip(
+                              label: 'Follower',
+                              value: profile.followerCount,
+                              onTap: () => context.push('/profile/${profile.id}/followers'),
+                            ),
+                            const SizedBox(width: 6),
+                            _StatChip(
+                              label: 'Folgt',
+                              value: profile.followingCount,
+                              onTap: () => context.push('/profile/${profile.id}/following'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        bottom: TabBar(
+            bottom: TabBar(
               controller: _tabController,
               tabs: const [
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.restaurant_outlined, size: 15),
-                      SizedBox(width: 5),
-                      Text('Rezepte'),
-                    ],
-                  ),
-                ),
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.calendar_month_outlined, size: 15),
-                      SizedBox(width: 5),
-                      Text('Pläne'),
-                    ],
-                  ),
-                ),
+                Tab(icon: Icon(Icons.restaurant_outlined, size: 15), text: 'Rezepte'),
+                Tab(icon: Icon(Icons.calendar_month_outlined, size: 15), text: 'Pläne'),
+                Tab(icon: Icon(Icons.article_outlined, size: 15), text: 'Posts'),
               ],
             ),
           ),
@@ -244,6 +236,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           children: const [
             _MyRecipesSection(),
             _MyPlansSection(),
+            _MyPostsSection(),
           ],
         ),
       ),
@@ -597,7 +590,7 @@ class _MyPlansSection extends ConsumerWidget {
                       style: theme.textTheme.titleSmall),
                   const SizedBox(height: 8),
                   FilledButton.icon(
-                    onPressed: () => context.go('/meal-plan'),
+                    onPressed: () => context.push('/kitchen/meal-plan/new'),
                     icon: const Icon(Icons.add_rounded),
                     label: const Text('Plan erstellen'),
                   ),
@@ -766,7 +759,49 @@ class _MyPlansSection extends ConsumerWidget {
   }
 }
 
+// ─── Meine Posts ─────────────────────────────────────────────────────────────
+
+class _MyPostsSection extends ConsumerWidget {
+  const _MyPostsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final postsAsync = ref.watch(myPostsProvider);
+
+    return postsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Fehler: $e')),
+      data: (posts) => posts.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.article_outlined,
+                      size: 56,
+                      color: theme.colorScheme.onSurfaceVariant),
+                  const SizedBox(height: 12),
+                  Text('Noch keine Posts', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    onPressed: () => context.go('/feed'),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Post erstellen'),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+              itemCount: posts.length,
+              itemBuilder: (ctx, i) => PostFeedCard(post: posts[i]),
+            ),
+    );
+  }
+}
+
 // ─── Detail-Screen für eigene Pläne (MeinBereich) ────────────────────────────
+
 
 class _MyOwnPlanDetailScreen extends ConsumerStatefulWidget {
   final CommunityMealPlan plan;

@@ -31,6 +31,7 @@ class OwnProfileNotifier extends AutoDisposeAsyncNotifier<UserProfile> {
 
   Future<void> updateProfile({
     String? displayName,
+    String? householdNickname,
     String? bio,
     SocialLinks? socialLinks,
     String? avatarUrl,
@@ -42,6 +43,7 @@ class OwnProfileNotifier extends AutoDisposeAsyncNotifier<UserProfile> {
     await repo.updateProfile(
       userId: userId,
       displayName: displayName,
+      householdNickname: householdNickname,
       bio: bio,
       socialLinks: socialLinks,
       avatarUrl: avatarUrl,
@@ -149,3 +151,18 @@ final postCommentsProvider =
         (ref, postId) async {
   return ref.read(userProfileRepositoryProvider).fetchPostComments(postId);
 });
+
+// ─── Eigene Posts ─────────────────────────────────────────────────────────────
+
+final myPostsProvider = FutureProvider.autoDispose<List<SocialPost>>((ref) async {
+  final userId = ref.read(userProfileRepositoryProvider).currentUserId ?? '';
+  return ref.read(userProfileRepositoryProvider).fetchUserPosts(userId);
+});
+
+// ─── Posts eines anderen Users ────────────────────────────────────────────────
+
+final userPublicPostsProvider =
+    FutureProvider.autoDispose.family<List<SocialPost>, String>((ref, userId) async {
+  return ref.read(userProfileRepositoryProvider).fetchUserPosts(userId);
+});
+

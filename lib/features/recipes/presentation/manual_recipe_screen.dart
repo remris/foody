@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import 'package:kokomi/core/data/ingredient_catalog.dart';
+import 'package:kokomi/core/services/supabase_service.dart';
 import 'package:kokomi/features/recipes/presentation/saved_recipes_provider.dart';
 import 'package:kokomi/models/recipe.dart';
 
@@ -38,6 +41,18 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
   String _difficulty = 'Einfach';
   final _ingredients = <_IngredientEntry>[];
   final _steps = <TextEditingController>[];
+  final _tags = <String>[];
+
+  // Bild
+  String? _imageUrl;
+  bool _isUploadingImage = false;
+
+  static const _kSuggestedTags = [
+    'Airfryer', 'OnePot', 'MealPrep', 'Vegan', 'Vegetarisch',
+    'Glutenfrei', 'Low Carb', 'High Protein', 'Schnell', 'Backen',
+    'Suppe', 'Salat', 'Frühstück', 'Dessert', 'Snack',
+    'Scharf', 'Comfort Food', 'Festlich', 'Familienküche',
+  ];
 
   @override
   void initState() {
@@ -87,6 +102,87 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
       _steps[index].dispose();
       _steps.removeAt(index);
     });
+  }
+
+  Future<void> _pickImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Kamera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Galerie'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            if (_imageUrl != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('Foto entfernen',
+                    style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  setState(() => _imageUrl = null);
+                  Navigator.pop(ctx);
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final file = await ImagePicker().pickImage(
+        source: source, imageQuality: 85, maxWidth: 1200);
+    if (file == null || !mounted) return;
+
+    setState(() => _isUploadingImage = true);
+    try {
+      final bytes = await file.readAsBytes();
+      final ext = file.name.split('.').last.toLowerCase();
+      final userId =
+          SupabaseService.client.auth.currentUser?.id ?? 'unknown';
+      final recipeId = DateTime.now().millisecondsSinceEpoch.toString();
+      final path = 'recipe_images/$userId/${recipeId}_new.$ext';
+
+      await SupabaseService.client.storage.from('recipe-images').uploadBinary(
+            path,
+            bytes,
+            fileOptions:
+                FileOptions(upsert: true, contentType: 'image/$ext'),
+          );
+
+      final url = SupabaseService.client.storage
+          .from('recipe-images')
+          .getPublicUrl(path);
+
+      setState(() => _imageUrl = url);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Bild-Upload fehlgeschlagen: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingImage = false);
+    }
   }
 
   void _save() {
@@ -139,6 +235,8 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
       servings: int.tryParse(_servingsController.text.trim()) ?? 2,
       ingredients: ingredients,
       steps: steps,
+      tags: List.from(_tags),
+      imageUrl: _imageUrl,
     );
 
     ref.read(savedRecipesProvider.notifier).saveRecipe(recipe, source: 'own');
@@ -171,7 +269,62 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Titel
+            // ── Foto ──────────────────────────────────────────────────────
+            GestureDetector(
+              onTap: _isUploadingImage ? null : _pickImage,
+              child: Container(
+                height: 180,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(16),
+                  image: _imageUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(_imageUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: _isUploadingImage
+                    ? const Center(child: CircularProgressIndicator())
+                    : _imageUrl == null
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_photo_alternate_outlined,
+                                size: 40,
+                                color: theme.colorScheme.onSurfaceVariant
+                                    .withValues(alpha: 0.6),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Foto hinzufügen (optional)',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant
+                                      .withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Align(
+                            alignment: Alignment.bottomRight,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: CircleAvatar(
+                                radius: 16,
+                                backgroundColor:
+                                    Colors.black.withValues(alpha: 0.5),
+                                child: const Icon(Icons.edit,
+                                    size: 16, color: Colors.white),
+                              ),
+                            ),
+                          ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ── Titel ─────────────────────────────────────────────────────
             TextFormField(
               controller: _titleController,
               decoration: const InputDecoration(
@@ -347,6 +500,80 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
                 ),
               );
             }),
+            const SizedBox(height: 24),
+
+            // ── Tags ──────────────────────────────────────────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Tags',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    Text('optional',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: theme.colorScheme.outline)),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final selected = await showModalBottomSheet<List<String>>(
+                          context: context,
+                          isScrollControlled: true,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(24)),
+                          ),
+                          builder: (_) => _TagPickerSheet(
+                            selected: List.from(_tags),
+                            suggestions: _kSuggestedTags,
+                          ),
+                        );
+                        if (selected != null) {
+                          setState(() {
+                            _tags
+                              ..clear()
+                              ..addAll(selected);
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.add_rounded, size: 16),
+                      label: const Text('Tags wählen'),
+                      style: OutlinedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (_tags.isNotEmpty) ...[
+              // Hinzugefügte Tags
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: _tags
+                    .map((t) => Chip(
+                          label: Text(t,
+                              style: const TextStyle(fontSize: 12)),
+                          deleteIcon:
+                              const Icon(Icons.close, size: 14),
+                          visualDensity: VisualDensity.compact,
+                          onDeleted: () =>
+                              setState(() => _tags.remove(t)),
+                        ))
+                    .toList(),
+              ),
+            ] else
+              Text(
+                'Noch keine Tags – tippe auf „Tags wählen"',
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline),
+              ),
+
             const SizedBox(height: 80),
           ],
         ),
@@ -412,7 +639,7 @@ class _IngredientRowState extends State<_IngredientRow> {
               optionsBuilder: (tv) {
                 final q = tv.text.trim();
                 if (q.length < 2) return [];
-                return IngredientCatalog.search(q, maxResults: 8).map((e) => e.name);
+                return IngredientCatalog.searchCooking(q, maxResults: 8).map((e) => e.name);
               },
               fieldViewBuilder: (ctx, controller, focusNode, onSubmitted) {
                 widget.entry.nameController = controller;
@@ -562,3 +789,164 @@ class _IngredientEntry {
     this.unit = 'g',
   });
 }
+
+// ─── Tag-Auswahl Bottom-Sheet ─────────────────────────────────────────────────
+
+class _TagPickerSheet extends StatefulWidget {
+  final List<String> selected;
+  final List<String> suggestions;
+
+  const _TagPickerSheet({
+    required this.selected,
+    required this.suggestions,
+  });
+
+  @override
+  State<_TagPickerSheet> createState() => _TagPickerSheetState();
+}
+
+class _TagPickerSheetState extends State<_TagPickerSheet> {
+  late final List<String> _selected;
+  final _customCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List.from(widget.selected);
+  }
+
+  @override
+  void dispose() {
+    _customCtrl.dispose();
+    super.dispose();
+  }
+
+  void _addCustom() {
+    final t = _customCtrl.text.trim();
+    if (t.isNotEmpty && !_selected.contains(t)) {
+      setState(() => _selected.add(t));
+      _customCtrl.clear();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DraggableScrollableSheet(
+      initialChildSize: 0.65,
+      maxChildSize: 0.92,
+      minChildSize: 0.4,
+      expand: false,
+      builder: (ctx, scrollCtrl) => Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 8, 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text('Tags auswählen',
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                ),
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Abbrechen')),
+                const SizedBox(width: 4),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, _selected),
+                  child: const Text('Fertig'),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          // Eigenen Tag eingeben
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: TextField(
+              controller: _customCtrl,
+              decoration: InputDecoration(
+                hintText: 'Eigenen Tag eingeben…',
+                isDense: true,
+                prefixIcon: const Icon(Icons.edit_outlined, size: 18),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.add_circle_rounded, size: 20),
+                  onPressed: _addCustom,
+                ),
+              ),
+              textCapitalization: TextCapitalization.words,
+              onSubmitted: (_) => _addCustom(),
+            ),
+          ),
+          // Ausgewählte Tags
+          if (_selected.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Ausgewählt',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w700)),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: _selected
+                    .map((t) => InputChip(
+                          label: Text(t,
+                              style: const TextStyle(fontSize: 12)),
+                          deleteIcon:
+                              const Icon(Icons.close, size: 14),
+                          onDeleted: () =>
+                              setState(() => _selected.remove(t)),
+                          selected: true,
+                          showCheckmark: false,
+                          visualDensity: VisualDensity.compact,
+                        ))
+                    .toList(),
+              ),
+            ),
+            const Divider(indent: 16, endIndent: 16),
+          ],
+          // Vorschläge
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Vorschläge',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600)),
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              controller: scrollCtrl,
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: widget.suggestions
+                    .where((t) => !_selected.contains(t))
+                    .map((t) => ActionChip(
+                          label: Text(t,
+                              style: const TextStyle(fontSize: 12)),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () =>
+                              setState(() => _selected.add(t)),
+                        ))
+                    .toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

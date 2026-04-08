@@ -10,6 +10,7 @@ import 'package:kokomi/features/community/presentation/community_meal_plan_detai
 import 'package:kokomi/core/services/supabase_service.dart';
 import 'package:kokomi/models/user_profile.dart';
 import 'package:kokomi/models/community_recipe.dart';
+import 'package:kokomi/features/profile/presentation/following_feed_screen.dart' show PostFeedCard;
 
 class PublicProfileScreen extends ConsumerStatefulWidget {
   final String userId;
@@ -20,7 +21,7 @@ class PublicProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
-  int _segment = 0; // 0 = Rezepte, 1 = Wochenpläne
+  int _segment = 0; // 0 = Rezepte, 1 = Wochenpläne, 2 = Posts
 
   @override
   void initState() {
@@ -68,13 +69,6 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Fehler: $e')),
         data: (profile) {
-          // Follow-State synchronisieren
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref
-                .read(followProvider(widget.userId).notifier)
-                .setInitial(profile.isFollowedByMe);
-          });
-
           return CustomScrollView(
             slivers: [
               // ── AppBar mit Avatar ─────────────────────────────────────
@@ -234,8 +228,12 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                           icon: Icon(Icons.restaurant_outlined, size: 15)),
                       ButtonSegment(
                           value: 1,
-                          label: Text('Wochenpläne'),
+                          label: Text('Pläne'),
                           icon: Icon(Icons.calendar_month_outlined, size: 15)),
+                      ButtonSegment(
+                          value: 2,
+                          label: Text('Posts'),
+                          icon: Icon(Icons.article_outlined, size: 15)),
                     ],
                     selected: {_segment},
                     onSelectionChanged: (s) =>
@@ -440,6 +438,34 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                             );
                           },
                           childCount: plans.length,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+              // ── Posts ─────────────────────────────────────────────────
+              if (_segment == 2)
+                ref.watch(userPublicPostsProvider(widget.userId)).when(
+                  loading: () => const SliverToBoxAdapter(
+                      child: Center(child: CircularProgressIndicator())),
+                  error: (e, _) =>
+                      SliverToBoxAdapter(child: Center(child: Text('$e'))),
+                  data: (posts) {
+                    if (posts.isEmpty) {
+                      return SliverToBoxAdapter(
+                        child: _EmptyState(
+                          icon: Icons.article_outlined,
+                          text: 'Noch keine Posts',
+                        ),
+                      );
+                    }
+                    return SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (ctx, i) => PostFeedCard(post: posts[i]),
+                          childCount: posts.length,
                         ),
                       ),
                     );

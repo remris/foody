@@ -29,339 +29,245 @@ class SettingsScreen extends ConsumerWidget {
         title: const Text('Einstellungen'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
-          // ── Mein Plan ──
-          Text(
-            'Mein Plan',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
+          // ── Mein Plan (immer sichtbar oben) ──
           const _PlanCard(),
-          const SizedBox(height: 28),
-
-          // ── Farbschema-Sektion ──
-          Text(
-            'Farbschema',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-          ),
           const SizedBox(height: 12),
-          _ColorSchemeGrid(
-            currentScheme: currentScheme,
-            onSelect: (scheme) {
-              ref.read(colorSchemeProvider.notifier).setColorScheme(scheme);
-            },
-          ),
-          const SizedBox(height: 28),
 
-          // ── Theme-Modus ──
-          Text(
-            'Erscheinungsbild',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: Column(
-              children: [
-                _ThemeModeTile(
-                  icon: Icons.brightness_auto,
-                  label: 'System',
-                  isSelected: currentThemeMode == ThemeMode.system,
-                  onTap: () => ref
-                      .read(themeModeProvider.notifier)
-                      .setThemeMode(ThemeMode.system),
-                ),
-                _ThemeModeTile(
-                  icon: Icons.light_mode,
-                  label: 'Hell',
-                  isSelected: currentThemeMode == ThemeMode.light,
-                  onTap: () => ref
-                      .read(themeModeProvider.notifier)
-                      .setThemeMode(ThemeMode.light),
-                ),
-                _ThemeModeTile(
-                  icon: Icons.dark_mode,
-                  label: 'Dunkel',
-                  isSelected: currentThemeMode == ThemeMode.dark,
-                  onTap: () => ref
-                      .read(themeModeProvider.notifier)
-                      .setThemeMode(ThemeMode.dark),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 28),
-
-          // ── Sprache ──
-          Text(
-            'Sprache',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const _LanguageCard(),
-          const SizedBox(height: 28),
-
-          // ── Inventar ──
-          Text(
-            'Inventar',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const _AutoRestockToggle(),
-          const SizedBox(height: 28),
-
-          // ── Benachrichtigungen ──
-          Text(
-            'Benachrichtigungen',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const _ExpiryReminderToggle(),
-          const SizedBox(height: 28),
-
-          // ── Allergene ──
-          Text(
-            'Allergene & Unverträglichkeiten',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const _AllergenFilterCard(),
-          const SizedBox(height: 28),
-
-          // ── Ernährung ──
-          Text(
-            'Ernährung & Nährwerte',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: ListTile(
-              leading: Icon(Icons.restaurant_menu_rounded,
-                  color: theme.colorScheme.primary),
-              title: const Text('Nährwert-Tracking'),
-              subtitle: const Text('Kalorien, Makros & Ernährungsprofil'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary
-                          .withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
+          // ── Darstellung ──
+          _SettingsGroup(
+            icon: Icons.palette_outlined,
+            title: 'Darstellung',
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Farbschema',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant)),
+                    const SizedBox(height: 8),
+                    _ColorSchemeGrid(
+                      currentScheme: currentScheme,
+                      onSelect: (scheme) =>
+                          ref.read(colorSchemeProvider.notifier).setColorScheme(scheme),
                     ),
-                    child: Text(
-                      'Pro',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.primary,
-                      ),
+                    const SizedBox(height: 12),
+                    Text('Erscheinungsbild',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant)),
+                    const SizedBox(height: 4),
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: Column(children: [
+                        _ThemeModeTile(
+                          icon: Icons.brightness_auto,
+                          label: 'System',
+                          isSelected: currentThemeMode == ThemeMode.system,
+                          onTap: () => ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.system),
+                        ),
+                        _ThemeModeTile(
+                          icon: Icons.light_mode,
+                          label: 'Hell',
+                          isSelected: currentThemeMode == ThemeMode.light,
+                          onTap: () => ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.light),
+                        ),
+                        _ThemeModeTile(
+                          icon: Icons.dark_mode,
+                          label: 'Dunkel',
+                          isSelected: currentThemeMode == ThemeMode.dark,
+                          onTap: () => ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.dark),
+                        ),
+                      ]),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.chevron_right),
-                ],
+                    const SizedBox(height: 8),
+                    Text('Sprache',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant)),
+                    const SizedBox(height: 4),
+                    const _LanguageCard(),
+                  ],
+                ),
               ),
-              onTap: () => context.push('/settings/nutrition'),
-            ),
+            ],
           ),
           const SizedBox(height: 8),
-          Card(
-            child: ListTile(
-              leading: Icon(Icons.calendar_month_rounded,
-                  color: theme.colorScheme.primary),
-              title: const Text('Wochenplaner'),
-              subtitle: const Text('Mahlzeiten für die Woche planen'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary
-                          .withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Pro',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.chevron_right),
-                ],
-              ),
-              onTap: () => context.push('/kitchen/meal-plan'),
-            ),
+
+          // ── Inventar & Benachrichtigungen ──
+          _SettingsGroup(
+            icon: Icons.kitchen_outlined,
+            title: 'Inventar & Benachrichtigungen',
+            children: [
+              const _AutoRestockToggle(),
+              const _ExpiryReminderToggle(),
+            ],
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 8),
+
+          // ── Allergene & Ernährung ──
+          _SettingsGroup(
+            icon: Icons.restaurant_menu_outlined,
+            title: 'Allergene & Ernährung',
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: _AllergenFilterCard(),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                child: ListTile(
+                  leading: Icon(Icons.restaurant_menu_rounded,
+                      color: theme.colorScheme.primary),
+                  title: const Text('Nährwert-Tracking'),
+                  subtitle: const Text('Kalorien, Makros & Ernährungsprofil'),
+                  trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                    _ProBadge(),
+                    const Icon(Icons.chevron_right),
+                  ]),
+                  onTap: () => context.push('/settings/nutrition'),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+          const SizedBox(height: 8),
 
           // ── Haushalt ──
-          Text(
-            'Haushalt',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: ListTile(
-              leading: Icon(Icons.home_outlined,
-                  color: theme.colorScheme.primary),
-              title: const Text('Mein Haushalt'),
-              subtitle: const Text('Inventar & Listen mit anderen teilen'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push('/settings/household'),
-            ),
-          ),
-          // ── Vorrat migrieren (nur bei Haushalt) ──
-          Consumer(
-            builder: (context, ref, _) {
-              final household = ref.watch(householdProvider).valueOrNull;
-              if (household == null) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Card(
-                  child: ListTile(
-                    leading: Icon(Icons.swap_horiz_rounded,
-                        color: theme.colorScheme.tertiary),
-                    title: const Text('Vorrat in Haushalt übertragen'),
-                    subtitle: const Text(
-                        'Alle privaten Vorräte zum geteilten Haushalt migrieren'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Vorrat migrieren?'),
-                          content: Text(
-                            'Alle deine privaten Vorräte werden in den '
-                            'Haushalt „${household.name}" übertragen. '
-                            'Alle Mitglieder können diese dann sehen und bearbeiten.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, false),
-                              child: const Text('Abbrechen'),
-                            ),
-                            FilledButton(
-                              onPressed: () => Navigator.pop(ctx, true),
-                              child: const Text('Übertragen'),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (confirm != true || !context.mounted) return;
-                      final count = await ref
-                          .read(inventoryProvider.notifier)
-                          .migrateToHousehold();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+          _SettingsGroup(
+            icon: Icons.home_outlined,
+            title: 'Haushalt',
+            children: [
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                child: ListTile(
+                  leading: Icon(Icons.home_outlined,
+                      color: theme.colorScheme.primary),
+                  title: const Text('Mein Haushalt'),
+                  subtitle: const Text('Inventar & Listen mit anderen teilen'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/settings/household'),
+                ),
+              ),
+              Consumer(builder: (context, ref, _) {
+                final household = ref.watch(householdProvider).valueOrNull;
+                if (household == null) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Card(
+                    child: ListTile(
+                      leading: Icon(Icons.swap_horiz_rounded,
+                          color: theme.colorScheme.tertiary),
+                      title: const Text('Vorrat in Haushalt übertragen'),
+                      subtitle: const Text('Alle privaten Vorräte übertragen'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Vorrat migrieren?'),
                             content: Text(
-                              count > 0
-                                  ? '✅ $count Artikel zum Haushalt übertragen'
-                                  : 'Keine privaten Artikel vorhanden',
-                            ),
+                                'Alle deine privaten Vorräte werden in den Haushalt „${household.name}" übertragen.'),
+                            actions: [
+                              TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Abbrechen')),
+                              FilledButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('Übertragen')),
+                            ],
                           ),
                         );
-                      }
-                    },
+                        if (confirm != true || !context.mounted) return;
+                        final count = await ref
+                            .read(inventoryProvider.notifier)
+                            .migrateToHousehold();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(count > 0
+                                ? '✅ $count Artikel zum Haushalt übertragen'
+                                : 'Keine privaten Artikel vorhanden'),
+                          ));
+                        }
+                      },
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 28),
-
-          // ── Konto ──
-          Text(
-            'Konto',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ── Abmelden ──
-          OutlinedButton.icon(
-            onPressed: () async {
-              await ref.read(authNotifierProvider.notifier).signOut();
-              if (context.mounted) context.go('/login');
-            },
-            icon: const Icon(Icons.logout),
-            label: const Text('Abmelden'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: theme.colorScheme.error,
-              side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.5)),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ── Konto löschen ──
-          OutlinedButton.icon(
-            onPressed: () => _showDeleteAccountDialog(context, ref),
-            icon: const Icon(Icons.delete_forever_rounded),
-            label: const Text('Konto dauerhaft löschen'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red.shade700,
-              side: BorderSide(color: Colors.red.shade300),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // ── Rechtliches ──
-          Text(
-            'Rechtliches',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
+                );
+              }),
+              const SizedBox(height: 8),
+            ],
           ),
           const SizedBox(height: 8),
-          _LegalTile(
-            icon: Icons.privacy_tip_outlined,
-            title: 'Datenschutzerklärung',
-            assetPath: 'assets/privacy_policy.html',
-            pageTitle: 'Datenschutzerklärung',
+
+          // ── Konto ──
+          _SettingsGroup(
+            icon: Icons.person_outline_rounded,
+            title: 'Konto',
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Column(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        await ref.read(authNotifierProvider.notifier).signOut();
+                        if (context.mounted) context.go('/login');
+                      },
+                      icon: const Icon(Icons.logout),
+                      label: const Text('Abmelden'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(44),
+                        foregroundColor: theme.colorScheme.error,
+                        side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.5)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: () => _showDeleteAccountDialog(context, ref),
+                      icon: const Icon(Icons.delete_forever_rounded),
+                      label: const Text('Konto dauerhaft löschen'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(44),
+                        foregroundColor: Colors.red.shade700,
+                        side: BorderSide(color: Colors.red.shade300),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          _LegalTile(
-            icon: Icons.description_outlined,
-            title: 'Nutzungsbedingungen (AGB)',
-            assetPath: 'assets/terms_of_service.html',
-            pageTitle: 'Nutzungsbedingungen',
-          ),
-          _LegalTile(
-            icon: Icons.info_outline_rounded,
-            title: 'Impressum',
-            assetPath: 'assets/imprint.html',
-            pageTitle: 'Impressum',
+          const SizedBox(height: 8),
+
+          // ── Rechtliches ──
+          _SettingsGroup(
+            icon: Icons.gavel_outlined,
+            title: 'Rechtliches',
+            children: [
+              _LegalTile(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Datenschutzerklärung',
+                assetPath: 'assets/privacy_policy.html',
+                pageTitle: 'Datenschutzerklärung',
+              ),
+              _LegalTile(
+                icon: Icons.description_outlined,
+                title: 'Nutzungsbedingungen (AGB)',
+                assetPath: 'assets/terms_of_service.html',
+                pageTitle: 'Nutzungsbedingungen',
+              ),
+              _LegalTile(
+                icon: Icons.info_outline_rounded,
+                title: 'Impressum',
+                assetPath: 'assets/imprint.html',
+                pageTitle: 'Impressum',
+              ),
+            ],
           ),
           const SizedBox(height: 16),
 
-          // ── App-Info ──
           Center(
             child: Text(
               'Kokomi v1.0.0',
@@ -370,6 +276,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -461,6 +368,66 @@ class _ColorSchemeGrid extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ─── _SettingsGroup (zusammenklappbare Sektion) ──────────────────────────────
+
+class _SettingsGroup extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final List<Widget> children;
+
+  const _SettingsGroup({
+    required this.icon,
+    required this.title,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          leading: Icon(icon, color: theme.colorScheme.primary, size: 22),
+          title: Text(title,
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w600)),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          childrenPadding: const EdgeInsets.only(bottom: 8),
+          expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── _ProBadge ────────────────────────────────────────────────────────────────
+
+class _ProBadge extends StatelessWidget {
+  const _ProBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(right: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text('Pro',
+          style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.primary)),
     );
   }
 }

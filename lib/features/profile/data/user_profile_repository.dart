@@ -79,6 +79,7 @@ class UserProfileRepository {
   Future<void> updateProfile({
     required String userId,
     String? displayName,
+    String? householdNickname,
     String? bio,
     String? avatarUrl,
     SocialLinks? socialLinks,
@@ -87,6 +88,7 @@ class UserProfileRepository {
       'updated_at': DateTime.now().toIso8601String(),
     };
     if (displayName != null) data['display_name'] = displayName;
+    if (householdNickname != null) data['household_nickname'] = householdNickname.trim().isEmpty ? null : householdNickname.trim();
     if (bio != null) data['bio'] = bio;
     if (avatarUrl != null) data['avatar_url'] = avatarUrl;
     if (socialLinks != null) data['social_links'] = socialLinks.toJson();
@@ -533,6 +535,20 @@ class UserProfileRepository {
       return (raw.first as Map)['count'] as int? ?? 0;
     }
     return 0;
+  }
+
+  /// Posts eines Users (eigene oder öffentliche) abrufen.
+  Future<List<SocialPost>> fetchUserPosts(String userId) async {
+    try {
+      final data = await _client
+          .from('social_posts')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false) as List<dynamic>;
+      return data.map((json) => SocialPost.fromJson(Map<String, dynamic>.from(json as Map))).toList();
+    } catch (_) {
+      return [];
+    }
   }
 }
 

@@ -69,12 +69,24 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
           controller: _tabController,
           tabs: const [
             Tab(
-              icon: Icon(Icons.restaurant_outlined, size: 18),
-              text: 'Rezepte',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.restaurant_outlined, size: 16),
+                  SizedBox(width: 6),
+                  Text('Rezepte'),
+                ],
+              ),
             ),
             Tab(
-              icon: Icon(Icons.calendar_month_outlined, size: 18),
-              text: 'Wochenpläne',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.calendar_month_outlined, size: 16),
+                  SizedBox(width: 6),
+                  Text('Wochenpläne'),
+                ],
+              ),
             ),
           ],
         ),

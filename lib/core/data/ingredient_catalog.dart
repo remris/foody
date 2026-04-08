@@ -2506,6 +2506,66 @@ class IngredientCatalog {
     IngredientEntry(name: 'Meerrettich (frisch, Winter)', category: 'Obst & Gemüse', canonicalId: 'meerrettich_frisch', defaultUnit: 'g'),
   ];
 
+  /// Kategorien die KEINE Kochzutaten sind (Haushalt, Hygiene, Tierfutter …)
+  static const Set<String> _nonCookingCategories = {
+    'Haushalt',
+    'Körperpflege',
+    'Tierfutter',
+    'Baby & Kind',
+  };
+
+  /// Gewürz-Kategorien (Einträge die beim Vorrats-Abgleich als optional gelten)
+  static const Set<String> _spiceCategories = {
+    'Gewürze & Soßen',
+  };
+
+  /// Gibt true zurück wenn der Katalog-Eintrag ein Gewürz / eine Würzmischung ist.
+  static bool isSpice(IngredientEntry entry) =>
+      _spiceCategories.contains(entry.category);
+
+  /// Prüft ob ein Zutatennamen im Katalog einem Gewürz entspricht.
+  static bool isSpiceByName(String name) {
+    final lower = name.toLowerCase().trim();
+    return all.any((e) =>
+        _spiceCategories.contains(e.category) &&
+        (e.name.toLowerCase() == lower ||
+            e.aliases.any((a) => a.toLowerCase() == lower)));
+  }
+
+  /// Sucht nur Kochzutaten (ohne Haushalt, Körperpflege, Tierfutter).
+  static List<IngredientEntry> searchCooking(String query, {int maxResults = 15}) {
+    if (query.trim().isEmpty) return [];
+    final cookingOnly = all.where((e) => !_nonCookingCategories.contains(e.category)).toList();
+    final normalized = _normalize(query.toLowerCase().trim());
+
+    final scored = <({IngredientEntry entry, int score})>[];
+    for (final entry in cookingOnly) {
+      final nameLower = _normalize(entry.name.toLowerCase());
+      int score = 0;
+      if (nameLower == normalized) {
+        score = 100;
+      } else if (nameLower.startsWith(normalized)) {
+        score = 80;
+      } else if (nameLower.contains(normalized)) {
+        score = 60;
+      } else {
+        for (final alias in entry.aliases) {
+          final aliasLower = _normalize(alias.toLowerCase());
+          if (aliasLower.startsWith(normalized)) {
+            score = 50;
+            break;
+          } else if (aliasLower.contains(normalized)) {
+            score = 40;
+            break;
+          }
+        }
+      }
+      if (score > 0) scored.add((entry: entry, score: score));
+    }
+    scored.sort((a, b) => b.score.compareTo(a.score));
+    return scored.take(maxResults).map((e) => e.entry).toList();
+  }
+
   /// Sucht Einträge anhand eines Suchbegriffs (fuzzy, Umlaut-tolerant).
   static List<IngredientEntry> search(String query, {int maxResults = 15}) {
     if (query.trim().isEmpty) return [];

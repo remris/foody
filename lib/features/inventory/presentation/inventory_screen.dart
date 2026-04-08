@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kokomi/core/utils/extensions.dart';
+import 'package:kokomi/core/constants/food_categories.dart';
 import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
 import 'package:kokomi/features/household/presentation/household_provider.dart';
 import 'package:kokomi/features/inventory/presentation/add_inventory_item_sheet.dart';
@@ -95,6 +96,25 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 _searchController.clear();
                 ref.read(inventorySearchProvider.notifier).state = '';
               }
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              sortMode == InventorySortMode.category
+                  ? Icons.view_list_rounded
+                  : Icons.category_rounded,
+              color: sortMode == InventorySortMode.category
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
+            ),
+            tooltip: sortMode == InventorySortMode.category
+                ? 'Normale Ansicht'
+                : 'Nach Kategorie gruppieren',
+            onPressed: () {
+              ref.read(inventorySortModeProvider.notifier).state =
+                  sortMode == InventorySortMode.category
+                      ? InventorySortMode.nameAZ
+                      : InventorySortMode.category;
             },
           ),
           // Sortier-Button
@@ -346,6 +366,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                   }
                   return const _EmptyInventory();
                 }
+
+                // ── Kategorie-Gruppenansicht ──────────────────────────────
+                if (sortMode == InventorySortMode.category) {
+                  return _buildCategoryGrouped(context, items);
+                }
+
+                // ── Normale flache Liste ──────────────────────────────────
                 return ListView.builder(
                       padding:
                           const EdgeInsets.fromLTRB(16, 0, 16, 88),
@@ -375,6 +402,89 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Baut eine nach Kategorien gruppierte Ansicht mit Überschriften.
+  Widget _buildCategoryGrouped(BuildContext context, List<InventoryItem> items) {
+    final theme = Theme.of(context);
+
+    // Gruppen aufbauen: Kategorie → Items
+    final Map<String, List<InventoryItem>> groups = {};
+    for (final item in items) {
+      final cat = item.ingredientCategory?.isNotEmpty == true
+          ? item.ingredientCategory!
+          : 'Sonstiges';
+      groups.putIfAbsent(cat, () => []).add(item);
+    }
+    // Alphabetisch sortiert, "Sonstiges" immer ans Ende
+    final sorted = groups.keys.toList()
+      ..sort((a, b) {
+        if (a == 'Sonstiges') return 1;
+        if (b == 'Sonstiges') return -1;
+        return a.compareTo(b);
+      });
+
+    // Flache Widget-Liste aus Überschriften + Items aufbauen
+    final widgets = <Widget>[];
+    for (final cat in sorted) {
+      final catItems = groups[cat]!;
+      final foodCat = FoodCategory.fromLabel(cat);
+
+      // Kategorie-Überschrift
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: (foodCat?.color ?? theme.colorScheme.surfaceContainerHighest)
+                      .withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  foodCat?.icon ?? Icons.category_outlined,
+                  size: 16,
+                  color: foodCat?.color ?? theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                cat,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '(${catItems.length})',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Items der Kategorie
+      for (var i = 0; i < catItems.length; i++) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _InventoryItemCard(item: catItems[i]),
+          ),
+        );
+      }
+    }
+    widgets.add(const SizedBox(height: 88));
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: widgets,
     );
   }
 

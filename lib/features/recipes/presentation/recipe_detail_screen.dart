@@ -18,6 +18,7 @@ import 'package:kokomi/widgets/cooking_spoon_rating.dart';
 import 'package:kokomi/features/community/presentation/community_provider.dart';
 import 'package:kokomi/features/community/presentation/publish_recipe_sheet.dart';
 import 'package:kokomi/models/community_recipe.dart';
+import 'package:kokomi/core/constants/staple_ingredients.dart';
 
 class RecipeDetailScreen extends ConsumerStatefulWidget {
   final FoodRecipe recipe;
@@ -412,7 +413,8 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
 
                         return Column(
                           children: recipe.ingredients.map((ing) {
-                            final inStock = inventoryNames.contains(ing.name.toLowerCase());
+                            final isStaple = isStapleIngredient(ing.name);
+                            final inStock = isStaple || inventoryNames.contains(ing.name.toLowerCase());
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: Row(
@@ -432,7 +434,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      inStock ? '✓Vorrat' : 'Fehlt',
+                                      inStock ? (isStaple ? '✓Basis' : '✓Vorrat') : 'Fehlt',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
@@ -491,6 +493,20 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                       ),
                     )),
                     const SizedBox(height: 16),
+                    // ─── Tags ───
+                    if (recipe.tags.isNotEmpty) ...[
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: recipe.tags.map((t) => Chip(
+                          label: Text(t, style: const TextStyle(fontSize: 11)),
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        )).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     // ─── Notizen ───
                     _RecipeNotes(recipeId: recipe.id),
                   ]),
@@ -645,45 +661,48 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
         icon: Icon(Icons.share_outlined, color: withBackground ? Colors.white : null),
         onPressed: _shareRecipe,
       )),
-      Consumer(
-        builder: (context, ref, _) {
-          final favorites = ref.watch(recipeFavoritesProvider);
-          final isFav = favorites.contains(recipe.id);
-          return wrapIcon(IconButton(
-            icon: Icon(
-              isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-              color: isFav ? Colors.redAccent : (withBackground ? Colors.white : null),
-            ),
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              ref.read(recipeFavoritesProvider.notifier).toggleFavorite(recipe.id);
-            },
-          ));
-        },
-      ),
-      Consumer(
-        builder: (context, ref, _) {
-          final savedRecipes = ref.watch(savedRecipesProvider).valueOrNull ?? [];
-          final isSaved = savedRecipes.any((r) => r.title == recipe.title);
-          return wrapIcon(IconButton(
-            icon: Icon(
-              isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-              color: withBackground ? Colors.white : null,
-            ),
-            onPressed: isSaved
-                ? null
-                : () async {
-                    await ref.read(savedRecipesProvider.notifier).saveRecipe(recipe);
-                    if (context.mounted) {
-                      HapticFeedback.lightImpact();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${recipe.title} gespeichert ✅')),
-                      );
-                    }
-                  },
-          ));
-        },
-      ),
+      // Favorit & Bookmark nur bei fremden/AI-Rezepten – nicht bei eigenen
+      if (recipe.source != 'own') ...[
+        Consumer(
+          builder: (context, ref, _) {
+            final favorites = ref.watch(recipeFavoritesProvider);
+            final isFav = favorites.contains(recipe.id);
+            return wrapIcon(IconButton(
+              icon: Icon(
+                isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                color: isFav ? Colors.redAccent : (withBackground ? Colors.white : null),
+              ),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                ref.read(recipeFavoritesProvider.notifier).toggleFavorite(recipe.id);
+              },
+            ));
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final savedRecipes = ref.watch(savedRecipesProvider).valueOrNull ?? [];
+            final isSaved = savedRecipes.any((r) => r.title == recipe.title);
+            return wrapIcon(IconButton(
+              icon: Icon(
+                isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                color: withBackground ? Colors.white : null,
+              ),
+              onPressed: isSaved
+                  ? null
+                  : () async {
+                      await ref.read(savedRecipesProvider.notifier).saveRecipe(recipe);
+                      if (context.mounted) {
+                        HapticFeedback.lightImpact();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('${recipe.title} gespeichert ✅')),
+                        );
+                      }
+                    },
+            ));
+          },
+        ),
+      ],
       Consumer(
         builder: (context, ref, _) {
           final published = ref.watch(myPublishedRecipesProvider).valueOrNull ?? [];
@@ -695,8 +714,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Cloud-Button: Veröffentlichen / Zurückziehen
-              // Nicht bei Community-Rezepten (fremde gespeicherte)
+              // Cloud-Button: nur bei eigenen oder AI-Rezepten (nicht bei gespeicherten Community-Rezepten)
               if (!widget.isFromCommunity)
                 wrapIcon(IconButton(
                   icon: Icon(
@@ -1018,9 +1036,32 @@ class _AddIngredientsToShoppingSheetState extends State<_AddIngredientsToShoppin
                 children: widget.ingredients.map((ing) {
                   final isSelected = _selected.contains(ing.name);
                   final displayAmount = widget.scaledAmounts[ing.name] ?? ing.amount;
+                  final isStaple = isStapleIngredient(ing.name);
                   return CheckboxListTile(
                     value: isSelected,
-                    title: Text(ing.name),
+                    title: Row(
+                      children: [
+                        Expanded(child: Text(ing.name)),
+                        if (isStaple)
+                          Container(
+                            margin: const EdgeInsets.only(left: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'vorrätig',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green.shade700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                     subtitle: displayAmount.isNotEmpty ? Text(displayAmount) : null,
                     dense: true,
                     onChanged: (val) => setState(() {
@@ -1167,8 +1208,16 @@ class _EditRecipeSheetState extends State<_EditRecipeSheet> {
   late int _servings;
   late List<RecipeIngredient> _ingredients;
   late List<String> _steps;
+  late List<String> _tags;
 
   static const _difficulties = ['Einfach', 'Mittel', 'Schwer'];
+
+  static const _kSuggestedTags = [
+    'Airfryer', 'OnePot', 'MealPrep', 'Vegan', 'Vegetarisch',
+    'Glutenfrei', 'Low Carb', 'High Protein', 'Schnell', 'Backen',
+    'Suppe', 'Salat', 'Frühstück', 'Dessert', 'Snack',
+    'Scharf', 'Comfort Food', 'Festlich', 'Familienküche',
+  ];
 
   @override
   void initState() {
@@ -1181,6 +1230,7 @@ class _EditRecipeSheetState extends State<_EditRecipeSheet> {
     _servings = r.servings;
     _ingredients = List.from(r.ingredients);
     _steps = List.from(r.steps);
+    _tags = List.from(r.tags);
   }
 
   @override
@@ -1201,6 +1251,7 @@ class _EditRecipeSheetState extends State<_EditRecipeSheet> {
       servings: _servings,
       ingredients: _ingredients,
       steps: _steps,
+      tags: _tags,
     );
     Navigator.pop(context, updated);
   }
@@ -1424,6 +1475,49 @@ class _EditRecipeSheetState extends State<_EditRecipeSheet> {
                     ),
                   );
                 }),
+                const Divider(height: 24),
+                // Tags
+                Row(
+                  children: [
+                    Text('Tags', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 4),
+                    Text('optional', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final selected = await showModalBottomSheet<List<String>>(
+                          context: context,
+                          isScrollControlled: true,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                          ),
+                          builder: (_) => _EditTagPickerSheet(
+                            selected: List.from(_tags),
+                            suggestions: _kSuggestedTags,
+                          ),
+                        );
+                        if (selected != null) setState(() { _tags.clear(); _tags.addAll(selected); });
+                      },
+                      icon: const Icon(Icons.add_rounded, size: 16),
+                      label: const Text('Tags wählen'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (_tags.isNotEmpty)
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: _tags.map((t) => Chip(
+                          label: Text(t, style: const TextStyle(fontSize: 12)),
+                          deleteIcon: const Icon(Icons.close, size: 14),
+                          visualDensity: VisualDensity.compact,
+                          onDeleted: () => setState(() => _tags.remove(t)),
+                        )).toList(),
+                  )
+                else
+                  Text('Noch keine Tags',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
                 const SizedBox(height: 40),
               ],
             ),
@@ -1434,3 +1528,118 @@ class _EditRecipeSheetState extends State<_EditRecipeSheet> {
   }
 }
 
+// ─── Tag-Auswahl für EditRecipeSheet ─────────────────────────────────────────
+
+class _EditTagPickerSheet extends StatefulWidget {
+  final List<String> selected;
+  final List<String> suggestions;
+  const _EditTagPickerSheet({required this.selected, required this.suggestions});
+  @override
+  State<_EditTagPickerSheet> createState() => _EditTagPickerSheetState();
+}
+
+class _EditTagPickerSheetState extends State<_EditTagPickerSheet> {
+  late final List<String> _selected;
+  final _customCtrl = TextEditingController();
+
+  @override
+  void initState() { super.initState(); _selected = List.from(widget.selected); }
+
+  @override
+  void dispose() { _customCtrl.dispose(); super.dispose(); }
+
+  void _addCustom() {
+    final t = _customCtrl.text.trim();
+    if (t.isNotEmpty && !_selected.contains(t)) {
+      setState(() => _selected.add(t));
+      _customCtrl.clear();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DraggableScrollableSheet(
+      initialChildSize: 0.65,
+      maxChildSize: 0.92,
+      minChildSize: 0.4,
+      expand: false,
+      builder: (ctx, scrollCtrl) => Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 8, 10),
+            child: Row(
+              children: [
+                Expanded(child: Text('Tags auswählen',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))),
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
+                const SizedBox(width: 4),
+                FilledButton(onPressed: () => Navigator.pop(context, _selected), child: const Text('Fertig')),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: TextField(
+              controller: _customCtrl,
+              decoration: InputDecoration(
+                hintText: 'Eigenen Tag eingeben…',
+                isDense: true,
+                prefixIcon: const Icon(Icons.edit_outlined, size: 18),
+                suffixIcon: IconButton(icon: const Icon(Icons.add_circle_rounded, size: 20), onPressed: _addCustom),
+              ),
+              textCapitalization: TextCapitalization.words,
+              onSubmitted: (_) => _addCustom(),
+            ),
+          ),
+          if (_selected.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Align(alignment: Alignment.centerLeft,
+                  child: Text('Ausgewählt', style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.primary, fontWeight: FontWeight.w700))),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+              child: Wrap(
+                spacing: 6, runSpacing: 4,
+                children: _selected.map((t) => InputChip(
+                  label: Text(t, style: const TextStyle(fontSize: 12)),
+                  deleteIcon: const Icon(Icons.close, size: 14),
+                  onDeleted: () => setState(() => _selected.remove(t)),
+                  selected: true, showCheckmark: false,
+                  visualDensity: VisualDensity.compact,
+                )).toList(),
+              ),
+            ),
+            const Divider(indent: 16, endIndent: 16),
+          ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Align(alignment: Alignment.centerLeft,
+                child: Text('Vorschläge', style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600))),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              controller: scrollCtrl,
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+              child: Wrap(
+                spacing: 6, runSpacing: 6,
+                children: widget.suggestions
+                    .where((t) => !_selected.contains(t))
+                    .map((t) => ActionChip(
+                          label: Text(t, style: const TextStyle(fontSize: 12)),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => setState(() => _selected.add(t)),
+                        ))
+                    .toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

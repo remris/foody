@@ -48,6 +48,8 @@ class SocialLinks {
 class UserProfile {
   final String id;
   final String displayName;
+  /// Spitzname für den Haushalt (optional, nur intern sichtbar für Haushaltsmitglieder)
+  final String? householdNickname;
   final String bio;
   final String? avatarUrl;
   final SocialLinks socialLinks;
@@ -59,6 +61,7 @@ class UserProfile {
   const UserProfile({
     required this.id,
     required this.displayName,
+    this.householdNickname,
     this.bio = '',
     this.avatarUrl,
     this.socialLinks = const SocialLinks(),
@@ -77,6 +80,7 @@ class UserProfile {
     return UserProfile(
       id: json['id'] as String,
       displayName: (json['display_name'] as String?) ?? '',
+      householdNickname: json['household_nickname'] as String?,
       bio: (json['bio'] as String?) ?? '',
       avatarUrl: json['avatar_url'] as String?,
       socialLinks: links,
@@ -90,6 +94,8 @@ class UserProfile {
   Map<String, dynamic> toJson() => {
         'id': id,
         'display_name': displayName,
+        if (householdNickname != null && householdNickname!.isNotEmpty)
+          'household_nickname': householdNickname,
         'bio': bio,
         'avatar_url': avatarUrl,
         'social_links': socialLinks.toJson(),
@@ -97,6 +103,8 @@ class UserProfile {
 
   UserProfile copyWith({
     String? displayName,
+    String? householdNickname,
+    bool clearHouseholdNickname = false,
     String? bio,
     String? avatarUrl,
     SocialLinks? socialLinks,
@@ -108,6 +116,9 @@ class UserProfile {
       UserProfile(
         id: id,
         displayName: displayName ?? this.displayName,
+        householdNickname: clearHouseholdNickname
+            ? null
+            : (householdNickname ?? this.householdNickname),
         bio: bio ?? this.bio,
         avatarUrl: avatarUrl ?? this.avatarUrl,
         socialLinks: socialLinks ?? this.socialLinks,

@@ -149,11 +149,12 @@ class _AddInventoryItemSheetState
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: EdgeInsets.only(
         left: 24,
         right: 24,
-        top: 24,
+        top: 32,                   // mehr Abstand oben
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: Form(
@@ -163,9 +164,20 @@ class _AddInventoryItemSheetState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Handle-Bar
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               Text(
                 widget.existingItem == null ? 'Zutat hinzufügen' : 'Zutat bearbeiten',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               // ── Haushalt / Privat Toggle ──
@@ -224,32 +236,28 @@ class _AddInventoryItemSheetState
                 ],
               ),
               const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Kategorie',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+              // ── Kategorie als Dropdown ──
+              DropdownButtonFormField<FoodCategory>(
+                value: _selectedCategory,
+                decoration: const InputDecoration(
+                  labelText: 'Kategorie (optional)',
+                  prefixIcon: Icon(Icons.category_outlined),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: FoodCategory.values.map((cat) {
-                  final isSelected = _selectedCategory == cat;
-                  return FilterChip(
-                    avatar: Icon(cat.icon, size: 16, color: isSelected ? Colors.white : cat.color),
-                    label: Text(cat.label),
-                    selected: isSelected,
-                    selectedColor: cat.color,
-                    labelStyle: TextStyle(color: isSelected ? Colors.white : null, fontSize: 12),
-                    onSelected: (selected) => setState(() => _selectedCategory = selected ? cat : null),
-                    showCheckmark: false,
-                    visualDensity: VisualDensity.compact,
+                hint: const Text('Kategorie wählen'),
+                isExpanded: true,
+                items: FoodCategory.values.map((cat) {
+                  return DropdownMenuItem(
+                    value: cat,
+                    child: Row(
+                      children: [
+                        Icon(cat.icon, size: 18, color: cat.color),
+                        const SizedBox(width: 10),
+                        Text(cat.label, style: const TextStyle(fontSize: 14)),
+                      ],
+                    ),
                   );
                 }).toList(),
+                onChanged: (cat) => setState(() => _selectedCategory = cat),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -299,6 +307,7 @@ class _AddInventoryItemSheetState
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                     : Text(widget.existingItem == null ? 'Hinzufügen' : 'Speichern'),
               ),
+              const SizedBox(height: 8),
             ],
           ),
         ),

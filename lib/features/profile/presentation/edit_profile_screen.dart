@@ -15,6 +15,7 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
+  late final TextEditingController _householdNicknameCtrl;
   late final TextEditingController _bioCtrl;
   late final TextEditingController _instaCtrl;
   late final TextEditingController _tiktokCtrl;
@@ -28,6 +29,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController();
+    _householdNicknameCtrl = TextEditingController();
     _bioCtrl = TextEditingController();
     _instaCtrl = TextEditingController();
     _tiktokCtrl = TextEditingController();
@@ -43,6 +45,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   void _fillFrom(UserProfile profile) {
     _nameCtrl.text = profile.displayName;
+    _householdNicknameCtrl.text = profile.householdNickname ?? '';
     _bioCtrl.text = profile.bio;
     _instaCtrl.text = profile.socialLinks.instagram ?? '';
     _tiktokCtrl.text = profile.socialLinks.tiktok ?? '';
@@ -53,6 +56,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _householdNicknameCtrl.dispose();
     _bioCtrl.dispose();
     _instaCtrl.dispose();
     _tiktokCtrl.dispose();
@@ -92,6 +96,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     try {
       await ref.read(ownProfileProvider.notifier).updateProfile(
             displayName: _nameCtrl.text.trim(),
+            householdNickname: _householdNicknameCtrl.text.trim(),
             bio: _bioCtrl.text.trim(),
             avatarUrl: _newAvatarUrl,
             socialLinks: SocialLinks(
@@ -213,12 +218,23 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   TextFormField(
                     controller: _nameCtrl,
                     decoration: const InputDecoration(
-                      labelText: 'Anzeigename',
+                      labelText: 'Anzeigename (Community)',
+                      hintText: 'Wird öffentlich angezeigt',
                       prefixIcon: Icon(Icons.person_outline),
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty)
                         ? 'Name darf nicht leer sein'
                         : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _householdNicknameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Haushalts-Spitzname (optional)',
+                      hintText: 'z.B. Papa, Mama, Roomie – nur für deinen Haushalt sichtbar',
+                      prefixIcon: Icon(Icons.home_outlined),
+                    ),
+                    maxLength: 30,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(

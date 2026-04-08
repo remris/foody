@@ -225,6 +225,17 @@ class ShoppingListNotifier extends AsyncNotifier<List<ShoppingListItem>> {
     await _reload();
   }
 
+  /// Alle Artikel löschen (für "Liste komplett leeren")
+  Future<void> clearAll() async {
+    final list = ref.read(selectedShoppingListProvider);
+    if (list == null) return;
+    final repo = ref.read(shoppingListRepositoryProvider);
+    final items = state.valueOrNull ?? [];
+    // Erst alle abhaken, dann alle löschen
+    await Future.wait(items.map((i) => repo.deleteItem(i.id)));
+    await _reload();
+  }
+
   /// Lokale Reihenfolge per Drag & Drop ändern.
   void reorderItems(int oldIndex, int newIndex) {
     final items = state.valueOrNull?.toList();

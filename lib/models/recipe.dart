@@ -56,6 +56,8 @@ class FoodRecipe {
   final List<String> steps;
   final NutritionInfo? nutrition;
   final String? imageUrl;
+  /// Tags z.B. ['Vegan', 'Airfryer', 'OnePot']
+  final List<String> tags;
   /// 'own' = selbst erstellt, 'community' = von Community gespeichert, 'ai' = KI-generiert
   /// 'manual' ist ein Legacy-Wert und wird zu 'own' normalisiert
   final String? _source;
@@ -77,6 +79,7 @@ class FoodRecipe {
     required this.steps,
     this.nutrition,
     this.imageUrl,
+    this.tags = const [],
     String source = 'ai',
     this.savedRecipeId,
   }) : _source = source;
@@ -102,6 +105,7 @@ class FoodRecipe {
             ? NutritionInfo.fromJson(json['nutrition'] as Map<String, dynamic>)
             : null,
         imageUrl: json['imageUrl'] as String? ?? json['image_url'] as String?,
+        tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ?? const [],
         source: (json['source'] as String?) ?? 'ai',
         savedRecipeId: (json['savedRecipeId'] as String?) ?? (json['saved_recipe_id'] as String?),
       );
@@ -117,6 +121,7 @@ class FoodRecipe {
         'steps': steps,
         'nutrition': nutrition?.toJson(),
         'imageUrl': imageUrl,
+        'tags': tags,
         'source': source,
         'savedRecipeId': savedRecipeId,
       };
@@ -132,6 +137,7 @@ class FoodRecipe {
     List<String>? steps,
     NutritionInfo? nutrition,
     String? imageUrl,
+    List<String>? tags,
     String? source,
     String? savedRecipeId,
   }) =>
@@ -146,7 +152,8 @@ class FoodRecipe {
         steps: steps ?? this.steps,
         nutrition: nutrition ?? this.nutrition,
         imageUrl: imageUrl ?? this.imageUrl,
-        source: source ?? this.source, // this.source nutzt den Getter → immer non-null
+        tags: tags ?? this.tags,
+        source: source ?? this.source,
         savedRecipeId: savedRecipeId ?? this.savedRecipeId,
       );
 }

@@ -81,7 +81,7 @@ class FollowingFeedScreen extends ConsumerWidget {
                   case FeedItemType.plan:
                     return _PlanFeedCard(plan: item.plan!);
                   case FeedItemType.post:
-                    return _PostFeedCard(post: item.post!);
+                    return PostFeedCard(post: item.post!);
                 }
               },
             ),
@@ -666,15 +666,15 @@ class _CreatePostSheetState extends ConsumerState<_CreatePostSheet> {
 
 // ─── Post-Card ────────────────────────────────────────────────────────────────
 
-class _PostFeedCard extends ConsumerStatefulWidget {
+class PostFeedCard extends ConsumerStatefulWidget {
   final SocialPost post;
-  const _PostFeedCard({required this.post});
+  const PostFeedCard({super.key, required this.post});
 
   @override
-  ConsumerState<_PostFeedCard> createState() => _PostFeedCardState();
+  ConsumerState<PostFeedCard> createState() => _PostFeedCardState();
 }
 
-class _PostFeedCardState extends ConsumerState<_PostFeedCard> {
+class _PostFeedCardState extends ConsumerState<PostFeedCard> {
   late SocialPost _post;
   bool _expanded = false;
 
