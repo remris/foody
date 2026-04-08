@@ -30,7 +30,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       features: [],
     ),
     _OnboardingPage(
-      emoji: '📦',
+      emoji: '',
       title: 'Scannen & Organisieren',
       subtitle: 'In Sekunden erfasst',
       description:
@@ -46,7 +46,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ],
     ),
     _OnboardingPage(
-      emoji: '🧠',
+      emoji: '',
       title: 'KI-Rezepte',
       subtitle: 'Kochen aus dem Vorrat',
       description:
@@ -62,7 +62,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ],
     ),
     _OnboardingPage(
-      emoji: '🌍',
+      emoji: '',
       title: 'Community',
       subtitle: 'Teile & entdecke',
       description:
@@ -345,46 +345,29 @@ class _PageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Logo (Seite 1) oder Emoji (alle anderen)
-          if (page.emoji.isEmpty)
-            Image.asset(
-              'assets/icon/foody_icon2-Photoroom.png',
-              width: 120,
-              height: 120,
-              fit: BoxFit.contain,
-            )
-          else
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.25),
-                  width: 1.5,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  page.emoji,
-                  style: const TextStyle(fontSize: 52),
-                ),
-              ),
-            ),
+          // Fester Abstand von oben – Logo immer auf gleicher Höhe
+          SizedBox(height: screenHeight * 0.12),
 
-          const SizedBox(height: 32),
+          // Logo (alle Seiten)
+          Image.asset(
+            'assets/icon/foody_icon2-Photoroom.png',
+            width: 110,
+            height: 110,
+            fit: BoxFit.contain,
+          ),
 
-          // Subtitle
+          const SizedBox(height: 36),
+
+          // Subtitle-Badge
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
