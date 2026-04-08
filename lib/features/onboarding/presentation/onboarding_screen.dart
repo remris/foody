@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,7 +20,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   static const _pages = [
     _OnboardingPage(
-      emoji: '🥦',
+      emoji: '',           // wird auf Seite 0 ignoriert – Logo wird gezeigt
       title: 'Willkommen bei Kokomi!',
       subtitle: 'Dein smarter Küchenhelfer',
       description:
@@ -351,25 +351,43 @@ class _PageContent extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Großes Emoji
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.3),
-                width: 1.5,
+          // Logo oder Emoji
+          if (page.emoji.isEmpty)
+            // ── App-Logo (erste Seite) ──────────────────────────────────
+            Container(
+              width: 100,
+              height: 100,
+
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(26),
+                child: Image.asset(
+                  'assets/icon/foody_icon2.png',
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            )
+          else
+            // ── Emoji (alle anderen Seiten) ────────────────────────────
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  page.emoji,
+                  style: const TextStyle(fontSize: 52),
+                ),
               ),
             ),
-            child: Center(
-              child: Text(
-                page.emoji,
-                style: const TextStyle(fontSize: 52),
-              ),
-            ),
-          ),
           const SizedBox(height: 32),
 
           // Subtitle

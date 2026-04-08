@@ -134,6 +134,8 @@ flutter:
     - assets/privacy_policy.html
     - assets/terms_of_service.html
     - assets/imprint.html
+    - assets/icon/
+    - assets/icons/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
