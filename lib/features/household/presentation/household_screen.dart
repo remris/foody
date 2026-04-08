@@ -6,6 +6,7 @@ import 'package:kokomi/features/household/presentation/household_chat_provider.d
 import 'package:kokomi/features/household/presentation/household_provider.dart';
 import 'package:kokomi/features/household/presentation/household_meal_plan_preference_provider.dart';
 import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomi/features/profile/presentation/profile_provider.dart';
 import 'package:kokomi/models/household.dart';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -152,8 +153,11 @@ class _NoHouseholdViewState extends ConsumerState<_NoHouseholdView> {
 
   void _showJoinDialog(BuildContext context) {
     final codeController = TextEditingController();
+    final profileDisplayName = ref.read(ownProfileProvider).valueOrNull?.displayName ?? '';
     final nameController = TextEditingController(
-      text: ref.read(currentUserProvider)?.email?.split('@').first ?? '',
+      text: profileDisplayName.isNotEmpty
+          ? profileDisplayName
+          : ref.read(currentUserProvider)?.email?.split('@').first ?? '',
     );
     showDialog(
       context: context,

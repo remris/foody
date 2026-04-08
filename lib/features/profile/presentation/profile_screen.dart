@@ -66,7 +66,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
-            expandedHeight: 240,
+            expandedHeight: 290,
             floating: false,
             pinned: true,
             snap: false,
@@ -77,6 +77,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               child: Text(displayName),
             ),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Profil bearbeiten',
+                onPressed: () => context.push('/profile/edit'),
+              ),
               IconButton(
                 icon: const Icon(Icons.person_outline_rounded),
                 tooltip: 'Mein Profil ansehen',
@@ -97,50 +102,38 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 bottom: false,
                 child: Container(
                   color: theme.colorScheme.surfaceContainerLow,
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 52),
+                  // top: Platz für AppBar (~56) + StatusBar (~24) = 80
+                  // bottom: Platz für TabBar (~48) + etwas Luft
+                  padding: const EdgeInsets.fromLTRB(20, 80, 20, 60),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
+                          // Avatar (nur tippbar, kein Edit-Overlay mehr nötig)
                           GestureDetector(
                             onTap: () => context.push('/profile/edit'),
-                            child: Stack(
-                              children: [
-                                (profile?.avatarUrl?.isNotEmpty == true)
-                                    ? CircleAvatar(
-                                        radius: 30,
-                                        backgroundImage: NetworkImage(profile!.avatarUrl!),
-                                      )
-                                    : CircleAvatar(
-                                        radius: 30,
-                                        backgroundColor: isPro
-                                            ? const Color(0xFFFFB700).withValues(alpha: 0.3)
-                                            : theme.colorScheme.primaryContainer,
-                                        child: Text(initials,
-                                            style: TextStyle(
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold,
-                                              color: isPro
-                                                  ? const Color(0xFFFF6B00)
-                                                  : theme.colorScheme.onPrimaryContainer,
-                                            )),
-                                      ),
-                                Positioned(
-                                  right: 0, bottom: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(3),
-                                    decoration: BoxDecoration(
-                                        color: theme.colorScheme.primary,
-                                        shape: BoxShape.circle),
-                                    child: Icon(Icons.edit_rounded,
-                                        size: 10, color: theme.colorScheme.onPrimary),
+                            child: (profile?.avatarUrl?.isNotEmpty == true)
+                                ? CircleAvatar(
+                                    radius: 30,
+                                    backgroundImage: NetworkImage(profile!.avatarUrl!),
+                                  )
+                                : CircleAvatar(
+                                    radius: 30,
+                                    backgroundColor: isPro
+                                        ? const Color(0xFFFFB700).withValues(alpha: 0.3)
+                                        : theme.colorScheme.primaryContainer,
+                                    child: Text(initials,
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: isPro
+                                              ? const Color(0xFFFF6B00)
+                                              : theme.colorScheme.onPrimaryContainer,
+                                        )),
                                   ),
-                                ),
-                              ],
-                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -177,11 +170,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                               ],
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            tooltip: 'Profil bearbeiten',
-                            onPressed: () => context.push('/profile/edit'),
-                          ),
                         ],
                       ),
                       if (profile?.bio.isNotEmpty == true) ...[
@@ -197,7 +185,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         _SocialLinksRow(links: profile.socialLinks),
                       ],
                       if (profile != null) ...[
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 8),
                         Row(
                           children: [
                             _StatChip(label: 'Rezepte', value: profile.recipeCount),
@@ -571,8 +559,8 @@ class _MyPlansSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    // Alle eigenen Pläne inkl. Entwürfe
     final plansAsync = ref.watch(myAllMealPlansProvider);
+    final isPro = ref.watch(isProProvider);
 
     return plansAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -590,9 +578,22 @@ class _MyPlansSection extends ConsumerWidget {
                       style: theme.textTheme.titleSmall),
                   const SizedBox(height: 8),
                   FilledButton.icon(
-                    onPressed: () => context.push('/kitchen/meal-plan/new'),
-                    icon: const Icon(Icons.add_rounded),
+                    onPressed: isPro
+                        ? () => context.push('/kitchen/meal-plan/new')
+                        : () => ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Wochenpläne erstellen ist nur mit Pro verfügbar 🔒'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            ),
+                    icon: Icon(isPro ? Icons.add_rounded : Icons.lock_outline_rounded, size: 18),
                     label: const Text('Plan erstellen'),
+                    style: isPro
+                        ? null
+                        : FilledButton.styleFrom(
+                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                            foregroundColor: theme.colorScheme.onSurfaceVariant,
+                          ),
                   ),
                 ],
               ),
@@ -784,7 +785,7 @@ class _MyPostsSection extends ConsumerWidget {
                   Text('Noch keine Posts', style: theme.textTheme.titleSmall),
                   const SizedBox(height: 8),
                   FilledButton.icon(
-                    onPressed: () => context.go('/feed'),
+                    onPressed: () => context.go('/home'),
                     icon: const Icon(Icons.add_rounded),
                     label: const Text('Post erstellen'),
                   ),
