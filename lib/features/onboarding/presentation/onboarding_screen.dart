@@ -20,7 +20,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   static const _pages = [
     _OnboardingPage(
-      emoji: '',           // wird auf Seite 0 ignoriert – Logo wird gezeigt
+      emoji: '',
       title: 'Willkommen bei Kokomi!',
       subtitle: 'Dein smarter Küchenhelfer',
       description:
@@ -30,14 +30,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       features: [],
     ),
     _OnboardingPage(
-      emoji: '📸',
+      emoji: '📦',
       title: 'Scannen & Organisieren',
       subtitle: 'In Sekunden erfasst',
       description:
           'Scanne einfach den Barcode deiner Lebensmittel.\n'
           'Kokomi erkennt das Produkt und fügt es automatisch\n'
           'deinem Vorrat hinzu.',
-      color: Color(0xFF2E7D32),
+      color: Color(0xFF2E5F7A),
       features: [
         ('📦', 'Barcode-Scanner'),
         ('⏰', 'Ablauf-Erinnerungen'),
@@ -46,14 +46,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ],
     ),
     _OnboardingPage(
-      emoji: '🤖',
+      emoji: '🧠',
       title: 'KI-Rezepte',
       subtitle: 'Kochen aus dem Vorrat',
       description:
           'Was soll ich heute kochen?\n'
           'Kokomi schlägt dir Rezepte vor, die genau\n'
           'zu deinen vorhandenen Zutaten passen.',
-      color: Color(0xFF6A1B9A),
+      color: Color(0xFF2A5470),
       features: [
         ('✨', 'KI-Rezeptvorschläge'),
         ('📅', 'Wochenplaner'),
@@ -62,14 +62,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ],
     ),
     _OnboardingPage(
-      emoji: '👥',
+      emoji: '🌍',
       title: 'Community',
       subtitle: 'Teile & entdecke',
       description:
           'Teile deine Rezepte und Wochenpläne\n'
           'mit der Kokomi-Community und entdecke\n'
           'Ideen von anderen Köchen.',
-      color: Color(0xFFE65100),
+      color: Color(0xFF1E4A63),
       features: [
         ('🍽️', 'Rezepte teilen'),
         ('📋', 'Pläne veröffentlichen'),
@@ -351,8 +351,7 @@ class _PageContent extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Logo auf Seite 0 – weißer BG im PNG wird durch farbigen
-          // Container mit ShaderMask unsichtbar gemacht
+          // Logo (Seite 1) oder Emoji (alle anderen)
           if (page.emoji.isEmpty)
             Image.asset(
               'assets/icon/foody_icon2-Photoroom.png',
@@ -368,7 +367,7 @@ class _PageContent extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: Colors.white.withValues(alpha: 0.25),
                   width: 1.5,
                 ),
               ),
