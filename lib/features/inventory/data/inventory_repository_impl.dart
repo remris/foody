@@ -1,4 +1,4 @@
-﻿import 'package:kokomi/core/constants/app_constants.dart';
+import 'package:kokomi/core/constants/app_constants.dart';
 import 'package:kokomi/core/services/supabase_service.dart';
 import 'package:kokomi/features/inventory/domain/inventory_repository.dart';
 import 'package:kokomi/models/inventory_item.dart';

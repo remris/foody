@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:kokomi/features/community/presentation/community_recipe_detail_screen.dart';
 import 'package:kokomi/models/community_recipe.dart';
 

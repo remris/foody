@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kokomi/features/auth/data/auth_repository_impl.dart';
 import 'package:kokomi/features/auth/domain/auth_repository.dart';

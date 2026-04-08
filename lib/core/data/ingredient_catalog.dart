@@ -1,4 +1,4 @@
-﻿/// Normalisierter Zutaten-Katalog für die Kokomi-App.
+/// Normalisierter Zutaten-Katalog für die Kokomi-App.
 /// Nur Gattungsbegriffe, keine Markennamen.
 /// Varianten (TK, Dose, Glas, frisch) sind als eigene Einträge aufgeführt.
 library ingredient_catalog;

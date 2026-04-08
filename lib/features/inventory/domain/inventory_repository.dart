@@ -1,4 +1,4 @@
-﻿import 'package:kokomi/models/inventory_item.dart';
+import 'package:kokomi/models/inventory_item.dart';
 
 abstract class InventoryRepository {
   Future<List<InventoryItem>> getInventory(String userId, {String? householdId});

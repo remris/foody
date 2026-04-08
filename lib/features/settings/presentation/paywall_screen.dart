@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
 import 'package:kokomi/core/services/revenuecat_service.dart';

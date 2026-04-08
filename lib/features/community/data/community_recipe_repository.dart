@@ -1,4 +1,4 @@
-﻿import 'dart:math';
+import 'dart:math';
 import 'package:kokomi/core/services/supabase_service.dart';
 import 'package:kokomi/models/community_recipe.dart';
 

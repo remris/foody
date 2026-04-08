@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomi/features/profile/data/user_profile_repository.dart';
 import 'package:kokomi/models/user_profile.dart';
 import 'package:kokomi/models/community_recipe.dart';

@@ -1,4 +1,4 @@
-﻿import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kokomi/core/services/supabase_service.dart';
 import 'package:kokomi/features/auth/domain/auth_repository.dart';
 

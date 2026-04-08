@@ -1,4 +1,4 @@
-﻿import 'package:kokomi/models/community_recipe.dart';
+import 'package:kokomi/models/community_recipe.dart';
 import 'package:kokomi/models/community_meal_plan.dart';
 
 // ─── SocialPost ───────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomi/core/services/profanity_filter.dart';
 import 'package:kokomi/features/community/data/community_recipe_repository.dart';
 import 'package:kokomi/features/settings/presentation/subscription_provider.dart';

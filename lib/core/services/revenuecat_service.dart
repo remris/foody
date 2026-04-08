@@ -51,8 +51,8 @@ class RevenueCatService {
   static Future<bool> purchase(StoreProduct product) async {
     if (!_initialized) return false;
     try {
-      final info = await Purchases.purchaseStoreProduct(product);
-      return _isPro(info);
+      final result = await Purchases.purchaseStoreProduct(product);
+      return _isPro(result.customerInfo);
     } on PurchasesErrorCode catch (e) {
       if (e == PurchasesErrorCode.purchaseCancelledError) return false;
       rethrow;

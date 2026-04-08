@@ -1,4 +1,4 @@
-﻿import 'package:kokomi/core/services/supabase_service.dart';
+import 'package:kokomi/core/services/supabase_service.dart';
 import 'package:kokomi/models/community_meal_plan.dart';
 
 class CommunityMealPlanRepository {

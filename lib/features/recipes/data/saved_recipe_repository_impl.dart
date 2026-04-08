@@ -1,4 +1,4 @@
-﻿import 'package:kokomi/core/constants/app_constants.dart';
+import 'package:kokomi/core/constants/app_constants.dart';
 import 'package:kokomi/core/services/supabase_service.dart';
 import 'package:kokomi/features/recipes/domain/saved_recipe_repository.dart';
 import 'package:kokomi/models/recipe.dart';

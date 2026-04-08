@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:kokomi/core/constants/color_schemes.dart';
 
 class AppTheme {

@@ -1,4 +1,4 @@
-﻿import 'package:kokomi/models/recipe.dart';
+import 'package:kokomi/models/recipe.dart';
 
 /// Lokaler Rezept-Generator – funktioniert komplett offline ohne API.
 /// Wird als Fallback verwendet wenn OpenAI nicht verfügbar ist.

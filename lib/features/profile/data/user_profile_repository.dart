@@ -1,4 +1,4 @@
-﻿import 'dart:typed_data';
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import 'package:kokomi/core/services/profanity_filter.dart';
 import 'package:kokomi/core/services/supabase_service.dart';

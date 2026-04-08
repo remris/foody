@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomi/features/auth/presentation/auth_provider.dart';
 import 'package:kokomi/features/household/presentation/household_provider.dart';
 import 'package:kokomi/features/shopping_list/data/shopping_list_realtime_service.dart';

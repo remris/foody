@@ -1,4 +1,4 @@
-﻿import 'package:kokomi/models/recipe.dart';
+import 'package:kokomi/models/recipe.dart';
 
 class CommunityRecipe {
   final String id;

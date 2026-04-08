@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomi/core/database/local_database.dart';
 import 'package:kokomi/core/services/connectivity_service.dart';

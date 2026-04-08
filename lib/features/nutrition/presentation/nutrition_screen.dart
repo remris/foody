@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomi/features/nutrition/presentation/nutrition_provider.dart';
 import 'package:kokomi/features/nutrition/presentation/nutrition_profile_sheet.dart';

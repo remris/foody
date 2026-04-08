@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
 import 'package:kokomi/features/recipes/data/recipe_repository_impl.dart';
 import 'package:kokomi/features/recipes/domain/recipe_repository.dart';

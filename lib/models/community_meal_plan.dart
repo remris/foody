@@ -1,4 +1,4 @@
-﻿import 'package:kokomi/features/meal_plan/presentation/meal_plan_provider.dart';
+import 'package:kokomi/features/meal_plan/presentation/meal_plan_provider.dart';
 
 /// Ein Community-Wochenplan der geteilt, bewertet und übernommen werden kann.
 class CommunityMealPlan {

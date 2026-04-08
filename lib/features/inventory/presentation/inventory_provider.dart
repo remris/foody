@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomi/core/constants/food_categories.dart';
 import 'package:kokomi/core/services/notification_service.dart';
 import 'package:kokomi/features/auth/presentation/auth_provider.dart';

@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:groq_sdk/groq_sdk.dart';
 import 'package:kokomi/models/recipe.dart';

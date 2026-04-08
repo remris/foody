@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomi/features/auth/presentation/auth_provider.dart';
 import 'package:kokomi/features/community/data/community_meal_plan_repository.dart';
 import 'package:kokomi/features/meal_plan/presentation/meal_plan_provider.dart';

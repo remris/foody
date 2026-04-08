@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:kokomi/core/constants/app_constants.dart';
 import 'package:kokomi/core/constants/food_categories.dart';
 import 'package:kokomi/features/scanner/domain/scanner_repository.dart';

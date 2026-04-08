@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:kokomi/features/inventory/presentation/inventory_screen.dart';
 import 'package:kokomi/features/shopping_list/presentation/shopping_list_screen.dart';
 

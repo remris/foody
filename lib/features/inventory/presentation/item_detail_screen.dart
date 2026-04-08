@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomi/core/constants/food_categories.dart';
 import 'package:kokomi/features/scanner/data/scanner_repository_impl.dart';

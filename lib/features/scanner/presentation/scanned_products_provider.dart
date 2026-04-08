@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomi/features/auth/presentation/auth_provider.dart';
 import 'package:kokomi/features/scanner/data/scanned_product_repository.dart';
 import 'package:kokomi/models/scanned_product.dart';
