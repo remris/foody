@@ -44,6 +44,25 @@ class _HouseholdChatSectionState
           curve: Curves.easeOut,
         );
       }
+    } on ProfanityException catch (e) {
+      if (mounted) {
+        // Text wiederherstellen damit der User korrigieren kann
+        _controller.text = content;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: Text(e.message)),
+              ],
+            ),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

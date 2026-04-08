@@ -2,6 +2,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kokomi/core/services/notification_service.dart';
+import 'package:kokomi/core/services/profanity_filter.dart';
 import 'package:kokomi/core/services/supabase_service.dart';
 import 'package:kokomi/features/auth/presentation/auth_provider.dart';
 import 'package:kokomi/features/household/presentation/household_provider.dart';
@@ -110,6 +111,9 @@ class HouseholdChatNotifier
     }
   }
 
+  // Temp-IDs von optimistisch gesendeten Nachrichten verfolgen
+  final Set<String> _pendingContents = {};
+
   void _subscribeRealtime(String householdId) {
     _realtimeSub?.cancel();
     SupabaseService.client
@@ -127,12 +131,24 @@ class HouseholdChatNotifier
             final newMsg = HouseholdMessage.fromJson(
                 payload.newRecord as Map<String, dynamic>);
             final current = state.valueOrNull ?? [];
-            // Eigene Nachrichten nicht nochmal einfügen
+
+            // Bereits vorhanden (echte ID)?
             if (current.any((m) => m.id == newMsg.id)) return;
+
+            // Eigene optimistisch eingefügte Nachricht ersetzen
+            if (newMsg.isFromCurrentUser) {
+              // temp-Eintrag mit gleichem Inhalt entfernen und durch echte ersetzen
+              final withoutTemp = current
+                  .where((m) => !(m.id.length <= 15 && m.content == newMsg.content))
+                  .toList();
+              state = AsyncData([newMsg, ...withoutTemp]);
+              return;
+            }
+
             state = AsyncData([newMsg, ...current]);
 
-            // Push wenn Nachricht von anderem User
-            if (!newMsg.isFromCurrentUser && !newMsg.isSystem) {
+            // Push-Notification für fremde Nachricht
+            if (!newMsg.isSystem) {
               await NotificationService.showHouseholdMessage(
                 senderName: newMsg.senderName,
                 message: newMsg.content,
@@ -148,7 +164,13 @@ class HouseholdChatNotifier
     final user = ref.read(currentUserProvider);
     if (household == null || user == null) return;
 
-    // Ermittl Display-Name aus Mitgliederliste
+    // ── Profanity-Filter ──────────────────────────────────────────────────
+    final filterError = ProfanityFilter.validate(content);
+    if (filterError != null) {
+      throw ProfanityException(filterError);
+    }
+
+    // Ermittle Display-Name aus Mitgliederliste
     final members = ref.read(householdMembersProvider).valueOrNull ?? [];
     final me = members.firstWhere(
       (m) => m.userId == user.id,
@@ -160,8 +182,11 @@ class HouseholdChatNotifier
       ),
     );
 
+    // temp-ID: kurze numerische Zeichenkette (max 15 Zeichen)
+    final tempId = '${DateTime.now().millisecondsSinceEpoch % 100000}';
+
     final msg = HouseholdMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(), // temp
+      id: tempId,
       householdId: household.id,
       userId: user.id,
       senderName: me.displayName ?? user.email?.split('@').first ?? 'Ich',
@@ -178,6 +203,7 @@ class HouseholdChatNotifier
       await SupabaseService.client
           .from('household_messages')
           .insert(msg.toJson());
+      // Realtime ersetzt den temp-Eintrag via Callback oben
     } catch (e) {
       // Rollback
       state = AsyncData(current);
@@ -208,3 +234,10 @@ final householdChatProvider =
   HouseholdChatNotifier.new,
 );
 
+/// Wird geworfen wenn der Profanity-Filter anschlägt.
+class ProfanityException implements Exception {
+  final String message;
+  const ProfanityException(this.message);
+  @override
+  String toString() => message;
+}

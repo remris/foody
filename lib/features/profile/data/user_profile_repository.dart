@@ -1,5 +1,6 @@
 ﻿import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
+import 'package:kokomi/core/services/profanity_filter.dart';
 import 'package:kokomi/core/services/supabase_service.dart';
 import 'package:kokomi/models/user_profile.dart';
 import 'package:kokomi/models/community_recipe.dart';
@@ -372,6 +373,10 @@ class UserProfileRepository {
     final me = currentUserId;
     if (me == null) throw Exception('Nicht eingeloggt');
 
+    // ── Profanity-Filter ─────────────────────────────────────────────────
+    final filterError = ProfanityFilter.validate(text);
+    if (filterError != null) throw Exception(filterError);
+
     // authorName aus Profil holen
     final profile = await _client
         .from('user_profiles')
@@ -429,6 +434,10 @@ class UserProfileRepository {
   Future<SocialPostComment> addPostComment(String postId, String text) async {
     final me = currentUserId;
     if (me == null) throw Exception('Nicht eingeloggt');
+
+    // ── Profanity-Filter ─────────────────────────────────────────────────
+    final filterError = ProfanityFilter.validate(text);
+    if (filterError != null) throw Exception(filterError);
 
     final profile = await _client
         .from('user_profiles')

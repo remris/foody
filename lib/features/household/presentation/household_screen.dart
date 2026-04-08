@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+﻿﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomi/features/auth/presentation/auth_provider.dart';
@@ -1354,6 +1354,22 @@ class _InlineChatTabState extends ConsumerState<_InlineChatTab> {
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeOut);
       }
+    } on ProfanityException catch (e) {
+      if (mounted) {
+        _controller.text = content;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(e.message)),
+            ]),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1843,6 +1859,22 @@ class _HouseholdChatScreenState
         _scrollController.animateTo(0,
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeOut);
+      }
+    } on ProfanityException catch (e) {
+      if (mounted) {
+        _controller.text = content;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(e.message)),
+            ]),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     } catch (_) {
       if (mounted) {

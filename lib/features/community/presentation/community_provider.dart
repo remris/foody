@@ -1,4 +1,5 @@
 ﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kokomi/core/services/profanity_filter.dart';
 import 'package:kokomi/features/community/data/community_recipe_repository.dart';
 import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
 import 'package:kokomi/models/community_recipe.dart';
@@ -238,6 +239,10 @@ class _RecipeCommentsNotifier
   }
 
   Future<void> addComment(String content) async {
+    // ── Profanity-Filter ─────────────────────────────────────────────────
+    final filterError = ProfanityFilter.validate(content);
+    if (filterError != null) throw Exception(filterError);
+
     final repo = ref.read(communityRepositoryProvider);
     final userId = repo.currentUserId;
     if (userId == null) return;
