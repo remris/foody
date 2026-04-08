@@ -5,7 +5,7 @@ class AppTheme {
   AppTheme._();
 
   /// Erzeugt das Light-Theme basierend auf dem gewählten Farbschema.
-  static ThemeData light([AppColorScheme scheme = AppColorScheme.teal]) {
+  static ThemeData light([AppColorScheme scheme = AppColorScheme.kokomi]) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: scheme.seedColor,
       secondary: scheme.accentColor,
@@ -16,7 +16,7 @@ class AppTheme {
   }
 
   /// Erzeugt das Dark-Theme basierend auf dem gewählten Farbschema.
-  static ThemeData dark([AppColorScheme scheme = AppColorScheme.teal]) {
+  static ThemeData dark([AppColorScheme scheme = AppColorScheme.kokomi]) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: scheme.seedColor,
       secondary: scheme.accentColor,

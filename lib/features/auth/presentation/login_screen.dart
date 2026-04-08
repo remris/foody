@@ -56,16 +56,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 60),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.restaurant_rounded,
-                    size: 56,
-                    color: Theme.of(context).colorScheme.primary,
+                // Kokomi Logo
+                Center(
+                  child: Image.asset(
+                    'assets/icon/foody_icon2-Photoroom.png',
+                    width: 96,
+                    height: 96,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 20),

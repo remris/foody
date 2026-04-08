@@ -28,6 +28,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           'Kokomi hilft dir, deinen Alltag in der Küche einfacher zu machen.',
       color: Color(0xFF3D6B8F),
       features: [],
+      showLogo: true,
     ),
     _OnboardingPage(
       emoji: '',
@@ -326,6 +327,7 @@ class _OnboardingPage {
   final String description;
   final Color color;
   final List<(String, String)> features;
+  final bool showLogo;
 
   const _OnboardingPage({
     required this.emoji,
@@ -334,6 +336,7 @@ class _OnboardingPage {
     required this.description,
     required this.color,
     required this.features,
+    this.showLogo = false,
   });
 }
 
@@ -355,13 +358,14 @@ class _PageContent extends StatelessWidget {
           // Fester Abstand von oben – Logo immer auf gleicher Höhe
           SizedBox(height: screenHeight * 0.12),
 
-          // Logo (alle Seiten)
-          Image.asset(
-            'assets/icon/foody_icon2-Photoroom.png',
-            width: 110,
-            height: 110,
-            fit: BoxFit.contain,
-          ),
+          // Logo (nur erste Seite)
+          if (page.showLogo)
+            Image.asset(
+              'assets/icon/foody_icon2-Photoroom.png',
+              width: 110,
+              height: 110,
+              fit: BoxFit.contain,
+            ),
 
           const SizedBox(height: 36),
 

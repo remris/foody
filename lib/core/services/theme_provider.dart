@@ -22,7 +22,7 @@ class ColorSchemeNotifier extends Notifier<AppColorScheme> {
   @override
   AppColorScheme build() {
     _loadFromPrefs();
-    return AppColorScheme.teal; // Default
+    return AppColorScheme.kokomi; // Default
   }
 
   Future<void> _loadFromPrefs() async {
@@ -31,7 +31,7 @@ class ColorSchemeNotifier extends Notifier<AppColorScheme> {
     if (saved != null) {
       final scheme = AppColorScheme.values.firstWhere(
         (s) => s.name == saved,
-        orElse: () => AppColorScheme.teal,
+        orElse: () => AppColorScheme.kokomi,
       );
       state = scheme;
     }
