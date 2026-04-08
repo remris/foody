@@ -1,0 +1,32 @@
+-- Migration 18: Zutaten-Katalog
+-- Der Zutaten-Katalog ist LOKAL in der Flutter-App implementiert:
+--   lib/core/data/ingredient_catalog.dart
+--
+-- Dort gibt es ~400+ Einträge mit:
+--   - Milchprodukte & Käse (erweitert)
+--   - Fleisch, Geflügel, Fisch, Wurst & Aufschnitt
+--   - Gemüse (frisch + TK) mit allen Varianten
+--   - Obst (inkl. Exoten)
+--   - Hülsenfrüchte (Dose / Glas / trocken)
+--   - Nudeln & Getreide (alle Sorten)
+--   - Brot & Backwaren
+--   - Backen & Mehl (inkl. glutenfreie Alternativen)
+--   - Öle, Essig & Saucen
+--   - Konserven & Gläser (Senf, Ketchup, Mayo, Oliven, Kapern...)
+--   - Gewürze & Kräuter (trocken + frisch, erweitert)
+--   - Nüsse, Samen & Trockenfrüchte
+--   - Süßes & Aufstriche
+--   - Asiatische Zutaten (Ramen, Miso, Hoisin, Dashi, Edamame...)
+--   - Mediterrane Zutaten (Pesto, Tahini, Harissa, Ras el Hanout...)
+--   - Mexikanische Zutaten
+--   - Indische Gewürze (Garam Masala, Ghee, Paneer...)
+--   - Tiefkühlprodukte (eigene Kategorie)
+--   - Fertigprodukte & Convenience
+--   - Getränke (Kaffee, Tee, Säfte, Weine, Bier...)
+--   - Frühstück
+--   - Haushaltswaren (Klopapier, Spülmittel, etc.)
+--
+-- KEINE SQL-Migration nötig – die App funktioniert komplett lokal.
+-- Optional: Falls serverseites Rezept-Matching benötigt wird, kann
+-- der Katalog per Script in eine Supabase-Tabelle importiert werden.
+

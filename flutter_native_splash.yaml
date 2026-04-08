@@ -1,0 +1,21 @@
+flutter_native_splash:
+  # Hintergrundfarbe (Foody Grün)
+  color: "#2E7D32"
+  color_dark: "#1B5E20"
+
+  # Emoji als Platzhalter (wird später durch echtes Icon ersetzt)
+  # Da kein Icon-Bild vorhanden, verwenden wir den App-Namen als Text
+
+  # Android 12+ Splash Screen
+  android_12:
+    color: "#2E7D32"
+    color_dark: "#1B5E20"
+
+  # Fullscreen
+  fullscreen: true
+
+  # Plattformen
+  android: true
+  ios: true
+  web: false
+

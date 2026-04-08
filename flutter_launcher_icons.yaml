@@ -1,0 +1,44 @@
+# flutter_launcher_icons.yaml
+# Konfiguration für App-Icon-Generierung
+#
+# ANLEITUNG:
+# 1. Erstelle das App-Icon als 1024×1024px PNG (KEIN Alpha-Kanal/Transparenz für iOS)
+# 2. Lege es unter assets/icon/app_icon.png ab
+# 3. Für Android Adaptive Icons: Vordergrund-Bild unter assets/icon/app_icon_foreground.png
+#    (Vordergrund sollte auf 108dp Canvas-Größe ausgelegt sein, sicherer Bereich: 72dp Mitte)
+# 4. Füge 'flutter_launcher_icons: ^0.14.0' zu dev_dependencies in pubspec.yaml hinzu
+# 5. Führe aus: dart run flutter_launcher_icons
+#
+# EMPFOHLENES ICON-KONZEPT (B – "Fork & Leaf"):
+# - Hintergrund: Tiefes Teal #00695C
+# - Symbol: Weiße Gabel, deren Zinken in stilisierte Blätter übergehen
+# - Stil: Flach, geometrisch, minimalistisch
+# - Tool-Empfehlung: Figma, icon.kitchen oder Adobe Illustrator
+#
+# TOOLS:
+# - Figma (kostenlos): https://figma.com – Vektorgrafik, App-Icon-Vorlage
+# - icon.kitchen: https://icon.kitchen – Google's Material Icon Generator
+# - appicon.co: https://appicon.co – Automatische Auflösungen
+
+flutter_icons:
+  # ── Android ──────────────────────────────────────────────────────────────
+  android: true
+  image_path: "assets/icon/foody_icon2.png"
+
+  # Android 8.0+ Adaptive Icon
+  # Das Icon hat weißen Hintergrund – wir verwenden weiß als Adaptive-Hintergrund
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/foody_icon2.png"
+
+  # ── iOS ──────────────────────────────────────────────────────────────────
+  ios: true
+  # WICHTIG: iOS App Store erlaubt keinen Alpha-Kanal
+  remove_alpha_ios: true
+  image_path_ios: "assets/icon/foody_icon2.png"
+
+  # ── Web ──────────────────────────────────────────────────────────────────
+  web:
+    generate: true
+    image_path: "assets/icon/foody_icon2.png"
+    background_color: "#FFFFFF"
+    theme_color: "#006B6B"
