@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Datenschutzerklärung – Foody</title>
+  <title>Datenschutzerklärung – Kokomi</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
            max-width: 800px; margin: 40px auto; padding: 0 20px;
@@ -18,56 +18,83 @@
   <p><strong>Zuletzt aktualisiert:</strong> April 2026</p>
 
   <h2>1. Verantwortlicher</h2>
-  <p>Foody App<br>
-  E-Mail: support@foodyapp.de</p>
+  <p>Kokomi App<br>
+  E-Mail: <a href="mailto:support@kokomi.app">support@kokomi.app</a></p>
 
   <h2>2. Welche Daten wir erheben</h2>
   <ul>
     <li><strong>E-Mail-Adresse</strong> – für die Registrierung und Anmeldung</li>
-    <li><strong>Anzeigename</strong> – für dein Profil in der Community</li>
+    <li><strong>Anzeigename / Profilbild</strong> – für dein Profil in der Community</li>
     <li><strong>Vorratsdaten</strong> – Lebensmittel die du scannst oder manuell eingibst</li>
-    <li><strong>Rezepte & Wochenpläne</strong> – die du erstellst oder speicherst</li>
-    <li><strong>Geräteinformationen</strong> – nur im Fehlerfall (via Sentry)</li>
+    <li><strong>Rezepte &amp; Wochenpläne</strong> – die du erstellst oder speicherst</li>
+    <li><strong>Social-Beiträge</strong> – Posts, Kommentare und Likes die du veröffentlichst</li>
+    <li><strong>Abo-Status</strong> – via RevenueCat (kein Speichern von Zahlungsdaten)</li>
+    <li><strong>KI-Nutzungsdaten</strong> – anonyme Zählung der KI-Anfragen (kein Inhalt)</li>
+    <li><strong>Geräteinformationen</strong> – nur im Fehlerfall, anonym via Sentry</li>
   </ul>
 
   <h2>3. Wie wir deine Daten verwenden</h2>
   <ul>
-    <li>Bereitstellung der App-Funktionen (Vorrat, Scanner, Rezepte)</li>
-    <li>Authentifizierung deines Kontos</li>
-    <li>Verbesserung der App durch anonyme Fehlerberichte</li>
+    <li>Bereitstellung aller App-Funktionen (Vorrat, Scanner, Rezepte, Community)</li>
+    <li>Authentifizierung und Kontoverwaltung</li>
+    <li>KI-basierte Rezeptgenerierung auf Basis deiner Eingaben</li>
+    <li>Verarbeitung deines Abo-Status (Kokomi Pro)</li>
+    <li>Anonyme Fehlerberichte zur App-Verbesserung</li>
   </ul>
 
   <h2>4. Datenspeicherung</h2>
-  <p>Deine Daten werden sicher auf Servern von <strong>Supabase</strong>
-  (EU-Rechenzentrum) gespeichert. Supabase ist DSGVO-konform.</p>
+  <p>Deine Daten werden sicher auf Servern von <strong>Supabase</strong> (EU-Rechenzentrum,
+  Frankfurt) gespeichert. Supabase ist DSGVO-konform und nach ISO 27001 zertifiziert.</p>
 
   <h2>5. Weitergabe an Dritte</h2>
-  <p>Wir geben deine Daten <strong>nicht</strong> an Dritte weiter, außer an:</p>
+  <p>Wir geben deine Daten <strong>nicht</strong> an Dritte zu Werbezwecken weiter.
+  Folgende Dienstleister erhalten nur die für ihren Dienst notwendigen Daten:</p>
   <ul>
-    <li><strong>Supabase</strong> – Datenbankdienst (EU)</li>
-    <li><strong>Sentry</strong> – anonymes Fehlerreporting (optional)</li>
+    <li><strong>Supabase</strong> – Datenbank &amp; Authentifizierung (EU)</li>
+    <li><strong>OpenAI / Groq</strong> – KI-Rezeptgenerierung (nur deine Anfrage-Texte, keine Kontodaten)</li>
+    <li><strong>RevenueCat</strong> – Abo-Verwaltung (anonymisierte Nutzer-ID, kein Name/E-Mail)</li>
+    <li><strong>Sentry</strong> – Anonymes Fehlerreporting (optional, keine personenbezogenen Daten)</li>
+    <li><strong>Firebase (Google)</strong> – Push-Benachrichtigungen (nur Geräte-Token)</li>
   </ul>
 
-  <h2>6. Deine Rechte</h2>
+  <h2>6. Rechtsgrundlage (DSGVO)</h2>
   <ul>
-    <li>Auskunft über gespeicherte Daten</li>
-    <li>Berichtigung falscher Daten</li>
-    <li>Löschung deines Kontos und aller Daten</li>
-    <li>Datenportabilität</li>
+    <li>Art. 6 Abs. 1 lit. b DSGVO – Vertragserfüllung (App-Nutzung)</li>
+    <li>Art. 6 Abs. 1 lit. f DSGVO – Berechtigtes Interesse (Fehlerbehebung)</li>
+    <li>Art. 6 Abs. 1 lit. a DSGVO – Einwilligung (Push-Benachrichtigungen)</li>
   </ul>
-  <p>Kontakt: <a href="mailto:support@foodyapp.de">support@foodyapp.de</a></p>
 
-  <h2>7. Kontodaten löschen</h2>
+  <h2>7. Deine Rechte</h2>
+  <ul>
+    <li><strong>Auskunft</strong> – über all deine gespeicherten Daten (Art. 15 DSGVO)</li>
+    <li><strong>Berichtigung</strong> – falscher oder unvollständiger Daten (Art. 16 DSGVO)</li>
+    <li><strong>Löschung</strong> – deines Kontos und aller Daten (Art. 17 DSGVO)</li>
+    <li><strong>Datenportabilität</strong> – Export deiner Daten als JSON (Art. 20 DSGVO)</li>
+    <li><strong>Widerspruch</strong> – gegen die Verarbeitung (Art. 21 DSGVO)</li>
+  </ul>
+  <p>Kontakt: <a href="mailto:support@kokomi.app">support@kokomi.app</a></p>
+
+  <h2>8. Kontodaten löschen</h2>
   <p>Du kannst dein Konto jederzeit in den App-Einstellungen unter
-  <em>Einstellungen → Konto löschen</em> dauerhaft löschen.
-  Alle deine Daten werden dabei unwiderruflich entfernt.</p>
+  <em>Einstellungen → Konto dauerhaft löschen</em> unwiderruflich löschen.
+  Alle personenbezogenen Daten werden innerhalb von 30 Tagen vollständig entfernt.</p>
 
-  <h2>8. Cookies / Tracking</h2>
-  <p>Wir verwenden keine Tracking-Cookies und kein
-  verhaltensbasiertes Advertising.</p>
+  <h2>9. Cookies / Tracking</h2>
+  <p>Wir verwenden keine Tracking-Cookies, kein verhaltensbasiertes Advertising
+  und keine Weitergabe von Daten an Werbenetzwerke.</p>
 
-  <h2>9. Änderungen</h2>
-  <p>Bei wesentlichen Änderungen informieren wir dich in der App.</p>
+  <h2>10. Minderjährige</h2>
+  <p>Kokomi richtet sich nicht an Kinder unter 13 Jahren. Wir erheben wissentlich
+  keine Daten von Minderjährigen unter 13 Jahren.</p>
+
+  <h2>11. Beschwerderecht</h2>
+  <p>Du hast das Recht, dich bei einer Datenschutz-Aufsichtsbehörde zu beschweren.
+  Zuständig ist z.B. der <a href="https://www.bfdi.bund.de" target="_blank">Bundesbeauftragte
+  für den Datenschutz und die Informationsfreiheit (BfDI)</a>.</p>
+
+  <h2>12. Änderungen dieser Datenschutzerklärung</h2>
+  <p>Bei wesentlichen Änderungen informieren wir dich in der App. Die jeweils aktuelle
+  Version ist immer unter <em>Einstellungen → Datenschutz</em> abrufbar.</p>
 </body>
 </html>
 

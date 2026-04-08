@@ -15,12 +15,11 @@
 - [x] **App-Icon erstellen** (1024×1024px PNG, kein Alpha-Kanal) → in alle Auflösungen via `flutter_launcher_icons` exportiert; Android: `mipmap-*`, iOS: `AppIcon.appiconset` ✅
 - [x] **RevenueCat-Integration** – `purchases_flutter` in `pubspec.yaml`, RevenueCat Dashboard konfiguriert ✅
 - [x] **Groq-Proxy verifizieren** – Edge Function deployed, `.env` in `.gitignore` ✅
-- [ ] **Datenschutzerklärung** – DSGVO-konforme Erklärung für Abo-Daten + KI-Nutzung + Supabase + Social Features (z.B. datenschutz-generator.de). URL in Settings-Screen verlinken.
-- [ ] **Nutzungsbedingungen / AGB** – Pflicht für Abo-Modell im App-Store. URL in Settings-Screen verlinken.
-- [ ] **Impressum** – Pflicht für deutschsprachige Apps im Store. URL in Settings-Screen verlinken.
+- [x] **Datenschutzerklärung** – DSGVO-konform erstellt (`assets/privacy_policy.html`), in Settings verlinkt ✅
+- [x] **Nutzungsbedingungen / AGB** – erstellt (`assets/terms_of_service.html`), in Settings verlinkt ✅
+- [x] **Impressum** – erstellt (`assets/imprint.html`), in Settings verlinkt ✅ ⚠️ Bitte eigene Adresse eintragen!
 - [x] **Android Signing-Keystore erstellen** – `foody-release.jks` vorhanden, in `build.gradle.kts` eingetragen ✅
-- [ ] **iOS Bundle-ID setzen** – In Xcode: Runner → Target → Signing & Capabilities → Bundle Identifier: `app.kokomi.app`
-- [ ] **iOS Signing-Zertifikat** – Apple Developer Account (99 $/Jahr), Provisioning Profile erstellen
+- [ ] **iOS Bundle-ID / Signing** – wird erst in ~6 Monaten benötigt (Android-First-Strategie)
 
 ### 🟡 WICHTIG – Sollte vor Launch fertig sein
 

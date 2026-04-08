@@ -297,60 +297,6 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
 
-          // ── Rechtliches ──
-          Text(
-            'Rechtliches',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: ListTile(
-              leading: Icon(Icons.privacy_tip_outlined,
-                  color: theme.colorScheme.primary),
-              title: const Text('Datenschutzerklärung'),
-              trailing: const Icon(Icons.open_in_new_rounded, size: 18),
-              onTap: () => showDialog(
-                context: context,
-                builder: (_) => const _PrivacyPolicyDialog(),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: ListTile(
-              leading: Icon(Icons.gavel_rounded,
-                  color: theme.colorScheme.primary),
-              title: const Text('Nutzungsbedingungen'),
-              trailing: const Icon(Icons.open_in_new_rounded, size: 18),
-              onTap: () => showDialog(
-                context: context,
-                builder: (_) => AlertDialog(
-                  title: const Text('Nutzungsbedingungen'),
-                  content: const SingleChildScrollView(
-                    child: Text(
-                      'Durch die Nutzung von Kokomi erklärst du dich mit unseren '
-                      'Nutzungsbedingungen einverstanden.\n\n'
-                      'Kokomi dient der persönlichen Nutzung zur Verwaltung von '
-                      'Lebensmitteln und Rezepten. Die Weitergabe von Inhalten '
-                      'Dritter ist nicht gestattet.\n\n'
-                      'Wir behalten uns vor, Konten bei Verstößen zu sperren.\n\n'
-                      'Stand: April 2026',
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Schließen'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 28),
-
           // ── Konto ──
           Text(
             'Konto',
@@ -384,6 +330,34 @@ class SettingsScreen extends ConsumerWidget {
               foregroundColor: Colors.red.shade700,
               side: BorderSide(color: Colors.red.shade300),
             ),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Rechtliches ──
+          Text(
+            'Rechtliches',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _LegalTile(
+            icon: Icons.privacy_tip_outlined,
+            title: 'Datenschutzerklärung',
+            assetPath: 'assets/privacy_policy.html',
+            pageTitle: 'Datenschutzerklärung',
+          ),
+          _LegalTile(
+            icon: Icons.description_outlined,
+            title: 'Nutzungsbedingungen (AGB)',
+            assetPath: 'assets/terms_of_service.html',
+            pageTitle: 'Nutzungsbedingungen',
+          ),
+          _LegalTile(
+            icon: Icons.info_outline_rounded,
+            title: 'Impressum',
+            assetPath: 'assets/imprint.html',
+            pageTitle: 'Impressum',
           ),
           const SizedBox(height: 16),
 
@@ -1384,5 +1358,174 @@ Future<void> _showDeleteAccountDialog(BuildContext context, WidgetRef ref) async
         ),
       );
     }
+  }
+}
+
+// ── Legal Tile ──────────────────────────────────────────────────────────────
+
+class _LegalTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String assetPath;
+  final String pageTitle;
+
+  const _LegalTile({
+    required this.icon,
+    required this.title,
+    required this.assetPath,
+    required this.pageTitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      title: Text(title),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => _LegalDetailScreen(
+            title: pageTitle,
+            assetPath: assetPath,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Legal Detail Screen ──────────────────────────────────────────────────────
+
+class _LegalDetailScreen extends StatefulWidget {
+  final String title;
+  final String assetPath;
+
+  const _LegalDetailScreen({required this.title, required this.assetPath});
+
+  @override
+  State<_LegalDetailScreen> createState() => _LegalDetailScreenState();
+}
+
+class _LegalDetailScreenState extends State<_LegalDetailScreen> {
+  String _htmlContent = '';
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContent();
+  }
+
+  Future<void> _loadContent() async {
+    final content = await DefaultAssetBundle.of(context).loadString(widget.assetPath);
+    if (mounted) {
+      setState(() {
+        _htmlContent = content;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: _HtmlTextView(html: _htmlContent),
+            ),
+    );
+  }
+}
+
+// ── Simple HTML → Flutter Text Renderer ─────────────────────────────────────
+
+class _HtmlTextView extends StatelessWidget {
+  final String html;
+  const _HtmlTextView({required this.html});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final lines = html
+        .replaceAll(RegExp(r'<h1[^>]*>'), '\n__H1__')
+        .replaceAll(RegExp(r'<h2[^>]*>'), '\n__H2__')
+        .replaceAll(RegExp(r'<li[^>]*>'), '\n  • ')
+        .replaceAll(RegExp(r'<br\s*/?>'), '\n')
+        .replaceAll(RegExp(r'<strong[^>]*>(.*?)</strong>', dotAll: true), r'**\1**')
+        .replaceAll(RegExp(r'<a[^>]*href="mailto:([^"]+)"[^>]*>.*?</a>', dotAll: true), r'\1')
+        .replaceAll(RegExp(r'<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>', dotAll: true), r'\2 (\1)')
+        .replaceAll(RegExp(r'<[^>]+>'), '')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .split('\n')
+        .map((l) => l.trimRight())
+        .where((l) => l.trim().isNotEmpty)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: lines.map((line) {
+        if (line.startsWith('__H1__')) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12, top: 8),
+            child: Text(
+              line.replaceFirst('__H1__', '').trim(),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          );
+        } else if (line.startsWith('__H2__')) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 20, bottom: 6),
+            child: Text(
+              line.replaceFirst('__H2__', '').trim(),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          );
+        } else if (line.startsWith('  •')) {
+          return Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 4),
+            child: _renderLine(line, theme),
+          );
+        } else {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _renderLine(line, theme),
+          );
+        }
+      }).toList(),
+    );
+  }
+
+  Widget _renderLine(String line, ThemeData theme) {
+    final parts = <InlineSpan>[];
+    final regex = RegExp(r'\*\*(.*?)\*\*');
+    int last = 0;
+    for (final match in regex.allMatches(line)) {
+      if (match.start > last) {
+        parts.add(TextSpan(text: line.substring(last, match.start)));
+      }
+      parts.add(TextSpan(
+        text: match.group(1),
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ));
+      last = match.end;
+    }
+    if (last < line.length) {
+      parts.add(TextSpan(text: line.substring(last)));
+    }
+    return RichText(
+      text: TextSpan(style: theme.textTheme.bodyMedium, children: parts),
+    );
   }
 }
