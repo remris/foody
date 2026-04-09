@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/models/recipe.dart';
 
 /// Zweistufiges Caching-System für KI-Rezepte.
 ///

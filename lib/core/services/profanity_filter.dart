@@ -1,4 +1,4 @@
-/// Profanity-Filter für Kokomi
+/// Profanity-Filter für kokomu
 /// Schützt Chat, Social Posts und Kommentare vor Beleidigungen und Hate Speech.
 class ProfanityFilter {
   ProfanityFilter._();

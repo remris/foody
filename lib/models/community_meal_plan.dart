@@ -1,4 +1,4 @@
-import 'package:kokomi/features/meal_plan/presentation/meal_plan_provider.dart';
+import 'package:kokomu/features/meal_plan/presentation/meal_plan_provider.dart';
 
 /// Ein Community-Wochenplan der geteilt, bewertet und übernommen werden kann.
 class CommunityMealPlan {
@@ -42,7 +42,7 @@ class CommunityMealPlan {
     return CommunityMealPlan(
       id: json['id'] as String,
       userId: json['user_id'] as String,
-      authorName: (json['author_name'] as String?) ?? 'Kokomi-User',
+      authorName: (json['author_name'] as String?) ?? 'kokomu-User',
       title: json['title'] as String,
       description: (json['description'] as String?) ?? '',
       planJson: (json['plan_json'] as List<dynamic>?) ?? [],

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 /// Alle verfügbaren Farbschemata für die App.
 enum AppColorScheme {
-  // ── Kokomi Brand ─────────────────────────────────────────────────────
-  kokomi('Kokomi', Color(0xFF3D6B8F), Color(0xFF56B4A0), Icons.spa_outlined),
+  // ── kokomu Brand ─────────────────────────────────────────────────────
+  kokomu('kokomu', Color(0xFF3D6B8F), Color(0xFF56B4A0), Icons.spa_outlined),
 
   // ── Neutral & Clean ──────────────────────────────────────────────────
   slate('Slate', Color(0xFF475569), Color(0xFF94A3B8), Icons.layers_outlined),

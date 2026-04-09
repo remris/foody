@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
 
 const _referralOptions = [
   'Bitte wählen …',
@@ -226,8 +226,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         title: const Text('Nutzungsbedingungen'),
         content: const SingleChildScrollView(
           child: Text(
-            'Durch die Nutzung von Kokomi erklärst du dich mit unseren '
-            'Nutzungsbedingungen einverstanden. Kokomi dient der persönlichen '
+            'Durch die Nutzung von kokomu erklärst du dich mit unseren '
+            'Nutzungsbedingungen einverstanden. kokomu dient der persönlichen '
             'Nutzung zur Verwaltung von Lebensmitteln und Rezepten. '
             'Die Weitergabe von Inhalten Dritter ist nicht gestattet. '
             'Wir behalten uns vor, Konten bei Verstößen zu sperren.\n\n'
@@ -251,7 +251,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         title: const Text('Datenschutzerklärung'),
         content: const SingleChildScrollView(
           child: Text(
-            'Kokomi speichert deine Daten sicher über Supabase. '
+            'kokomu speichert deine Daten sicher über Supabase. '
             'Deine E-Mail-Adresse wird nur für die Authentifizierung verwendet. '
             'Wir geben keine persönlichen Daten an Dritte weiter. '
             'Du kannst dein Konto und alle Daten jederzeit löschen.\n\n'
@@ -613,7 +613,7 @@ class _Step3 extends StatelessWidget {
           DropdownButtonFormField<String>(
             value: referral,
             decoration: const InputDecoration(
-              labelText: 'Woher kennst du Kokomi?',
+              labelText: 'Woher kennst du kokomu?',
               prefixIcon: Icon(Icons.search_rounded),
             ),
             items: _referralOptions

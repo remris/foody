@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
-import 'package:kokomi/core/services/profanity_filter.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/models/user_profile.dart';
-import 'package:kokomi/models/community_recipe.dart';
-import 'package:kokomi/models/community_meal_plan.dart';
-import 'package:kokomi/models/feed_item.dart';
+import 'package:kokomu/core/services/profanity_filter.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/models/user_profile.dart';
+import 'package:kokomu/models/community_recipe.dart';
+import 'package:kokomu/models/community_meal_plan.dart';
+import 'package:kokomu/models/feed_item.dart';
 
 class UserProfileRepository {
   final _client = SupabaseService.client;
@@ -57,7 +57,7 @@ class UserProfileRepository {
       // Profil existiert noch nicht – Fallback
       return UserProfile(
         id: userId,
-        displayName: 'Kokomi-User',
+        displayName: 'kokomu-User',
         recipeCount: recipeData.length,
         followerCount: followerData.length,
         followingCount: followingData.length,
@@ -387,7 +387,7 @@ class UserProfileRepository {
         .maybeSingle();
     final authorName = (profile?['display_name'] as String?)?.isNotEmpty == true
         ? profile!['display_name'] as String
-        : _client.auth.currentUser?.email?.split('@').first ?? 'Kokomi-User';
+        : _client.auth.currentUser?.email?.split('@').first ?? 'kokomu-User';
 
     final result = await _client.from('social_posts').insert({
       'user_id': me,
@@ -448,7 +448,7 @@ class UserProfileRepository {
         .maybeSingle();
     final authorName = (profile?['display_name'] as String?)?.isNotEmpty == true
         ? profile!['display_name'] as String
-        : _client.auth.currentUser?.email?.split('@').first ?? 'Kokomi-User';
+        : _client.auth.currentUser?.email?.split('@').first ?? 'kokomu-User';
 
     final result = await _client.from('social_post_comments').insert({
       'post_id': postId,

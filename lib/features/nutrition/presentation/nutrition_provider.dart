@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/models/recipe.dart';
 
 // ── Enums ──
 

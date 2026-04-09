@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/core/constants/food_categories.dart';
-import 'package:kokomi/core/data/ingredient_catalog.dart';
-import 'package:kokomi/core/services/expiry_date_ocr_service.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/household/presentation/household_provider.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/models/inventory_item.dart';
+import 'package:kokomu/core/constants/food_categories.dart';
+import 'package:kokomu/core/data/ingredient_catalog.dart';
+import 'package:kokomu/core/services/expiry_date_ocr_service.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/household/presentation/household_provider.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/models/inventory_item.dart';
 
 class AddInventoryItemSheet extends ConsumerStatefulWidget {
   final InventoryItem? existingItem;

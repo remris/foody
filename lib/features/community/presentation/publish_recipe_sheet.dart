@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/community/presentation/community_provider.dart';
-import 'package:kokomi/features/recipes/presentation/saved_recipes_provider.dart';
-import 'package:kokomi/models/community_recipe.dart';
-import 'package:kokomi/models/recipe.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
+import 'package:kokomu/features/community/presentation/community_provider.dart';
+import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
+import 'package:kokomu/models/community_recipe.dart';
+import 'package:kokomu/models/recipe.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
 
 /// Sheet zum Veröffentlichen eines Rezepts in der Community.
 /// Unterstützt:
@@ -160,7 +160,7 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
     setState(() => _isPublishing = true);
 
     final user = SupabaseService.client.auth.currentUser;
-    final authorName = user?.email?.split('@').first ?? 'Kokomi-User';
+    final authorName = user?.email?.split('@').first ?? 'kokomu-User';
 
     final communityRecipe = CommunityRecipe.fromFoodRecipe(
       recipe!,

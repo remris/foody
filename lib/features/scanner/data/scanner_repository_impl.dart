@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
-import 'package:kokomi/core/constants/app_constants.dart';
-import 'package:kokomi/core/constants/food_categories.dart';
-import 'package:kokomi/features/scanner/domain/scanner_repository.dart';
-import 'package:kokomi/models/inventory_item.dart';
-import 'package:kokomi/models/product_details.dart';
+import 'package:kokomu/core/constants/app_constants.dart';
+import 'package:kokomu/core/constants/food_categories.dart';
+import 'package:kokomu/features/scanner/domain/scanner_repository.dart';
+import 'package:kokomu/models/inventory_item.dart';
+import 'package:kokomu/models/product_details.dart';
 
 class ScannerRepositoryImpl implements ScannerRepository {
   final _dio = Dio();

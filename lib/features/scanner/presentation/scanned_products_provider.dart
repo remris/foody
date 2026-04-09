@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/scanner/data/scanned_product_repository.dart';
-import 'package:kokomi/models/scanned_product.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/scanner/data/scanned_product_repository.dart';
+import 'package:kokomu/models/scanned_product.dart';
 
 final scannedProductRepoProvider = Provider<ScannedProductRepository>((ref) {
   return ScannedProductRepository();

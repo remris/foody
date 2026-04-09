@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kokomi/features/community/presentation/community_recipe_detail_screen.dart';
-import 'package:kokomi/models/community_recipe.dart';
+import 'package:kokomu/features/community/presentation/community_recipe_detail_screen.dart';
+import 'package:kokomu/models/community_recipe.dart';
 
 /// Zeigt Rezepte eines User-Profils mit Links/Rechts-Swipe-Navigation.
 class ProfileRecipePageView extends StatefulWidget {

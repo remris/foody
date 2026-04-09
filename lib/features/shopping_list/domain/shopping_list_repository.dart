@@ -1,5 +1,5 @@
-import 'package:kokomi/models/shopping_list.dart';
-import 'package:kokomi/models/shopping_list_item.dart';
+import 'package:kokomu/models/shopping_list.dart';
+import 'package:kokomu/models/shopping_list_item.dart';
 
 abstract class ShoppingListRepository {
   // Listen-CRUD

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/nutrition/presentation/nutrition_provider.dart';
-import 'package:kokomi/features/nutrition/presentation/nutrition_profile_sheet.dart';
-import 'package:kokomi/features/nutrition/presentation/macro_ring_chart.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/features/settings/presentation/paywall_screen.dart';
+import 'package:kokomu/features/nutrition/presentation/nutrition_provider.dart';
+import 'package:kokomu/features/nutrition/presentation/nutrition_profile_sheet.dart';
+import 'package:kokomu/features/nutrition/presentation/macro_ring_chart.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/features/settings/presentation/paywall_screen.dart';
 
 class NutritionScreen extends ConsumerWidget {
   const NutritionScreen({super.key});

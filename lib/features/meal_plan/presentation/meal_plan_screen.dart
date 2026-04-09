@@ -2,24 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:kokomi/features/meal_plan/presentation/meal_plan_provider.dart';
-import 'package:kokomi/features/recipes/presentation/saved_recipes_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_category_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_rating_provider.dart';
-import 'package:kokomi/features/nutrition/presentation/nutrition_provider.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/features/settings/presentation/paywall_screen.dart';
-import 'package:kokomi/features/community/presentation/publish_meal_plan_sheet.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_provider.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_detail_screen.dart';
-import 'package:kokomi/features/meal_plan/presentation/new_meal_plan_screen.dart';
-import 'package:kokomi/models/community_meal_plan.dart';
-import 'package:kokomi/features/household/presentation/household_provider.dart';
-import 'package:kokomi/features/household/presentation/household_meal_plan_preference_provider.dart';
-import 'package:kokomi/core/services/pdf_export_service.dart';
-import 'package:kokomi/models/recipe.dart';
-import 'package:kokomi/features/recipes/presentation/cooking_mode_screen.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_detail_screen.dart';
+import 'package:kokomu/features/meal_plan/presentation/meal_plan_provider.dart';
+import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_category_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_rating_provider.dart';
+import 'package:kokomu/features/nutrition/presentation/nutrition_provider.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/features/settings/presentation/paywall_screen.dart';
+import 'package:kokomu/features/community/presentation/publish_meal_plan_sheet.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_provider.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_detail_screen.dart';
+import 'package:kokomu/features/meal_plan/presentation/new_meal_plan_screen.dart';
+import 'package:kokomu/models/community_meal_plan.dart';
+import 'package:kokomu/features/household/presentation/household_provider.dart';
+import 'package:kokomu/features/household/presentation/household_meal_plan_preference_provider.dart';
+import 'package:kokomu/core/services/pdf_export_service.dart';
+import 'package:kokomu/models/recipe.dart';
+import 'package:kokomu/features/recipes/presentation/cooking_mode_screen.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_detail_screen.dart';
 import 'package:go_router/go_router.dart';
 
 class MealPlanScreen extends ConsumerStatefulWidget {
@@ -1095,7 +1095,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
       }
       buffer.writeln();
     }
-    buffer.writeln('— erstellt mit Kokomi');
+    buffer.writeln('— erstellt mit kokomu');
     SharePlus.instance.share(ShareParams(text: buffer.toString()));
   }
 
@@ -1130,7 +1130,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
         return;
       }
       final bytes = await PdfExportService.generateMealPlanPdf(plan);
-      await PdfExportService.sharePdf(bytes, 'Wochenplan_Kokomi.pdf');
+      await PdfExportService.sharePdf(bytes, 'Wochenplan_kokomu.pdf');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

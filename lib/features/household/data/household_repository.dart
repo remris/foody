@@ -1,6 +1,6 @@
 import 'dart:math';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/models/household.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/models/household.dart';
 
 class HouseholdRepository {
   final _client = SupabaseService.client;

@@ -3,21 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/features/community/presentation/community_provider.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_provider.dart';
-import 'package:kokomi/features/community/presentation/community_recipe_detail_screen.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_detail_screen.dart';
-import 'package:kokomi/features/community/presentation/publish_meal_plan_sheet.dart';
-import 'package:kokomi/features/meal_plan/presentation/new_meal_plan_screen.dart';
-import 'package:kokomi/features/profile/presentation/profile_provider.dart';
-import 'package:kokomi/models/community_meal_plan.dart';
-import 'package:kokomi/models/community_recipe.dart';
-import 'package:kokomi/models/user_profile.dart';
-import 'package:kokomi/widgets/main_shell.dart' show AppBarMoreButton;
-import 'package:kokomi/models/feed_item.dart';
-import 'package:kokomi/features/profile/presentation/following_feed_screen.dart' show PostFeedCard;
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/features/community/presentation/community_provider.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_provider.dart';
+import 'package:kokomu/features/community/presentation/community_recipe_detail_screen.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_detail_screen.dart';
+import 'package:kokomu/features/community/presentation/publish_meal_plan_sheet.dart';
+import 'package:kokomu/features/meal_plan/presentation/new_meal_plan_screen.dart';
+import 'package:kokomu/features/profile/presentation/profile_provider.dart';
+import 'package:kokomu/models/community_meal_plan.dart';
+import 'package:kokomu/models/community_recipe.dart';
+import 'package:kokomu/models/user_profile.dart';
+import 'package:kokomu/widgets/main_shell.dart' show AppBarMoreButton;
+import 'package:kokomu/models/feed_item.dart';
+import 'package:kokomu/features/profile/presentation/following_feed_screen.dart' show PostFeedCard;
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -55,7 +55,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     final isPro = ref.watch(isProProvider);
     final profileAsync = ref.watch(ownProfileProvider);
 
-    final fallbackName = user?.email?.split('@').first ?? 'Kokomi';
+    final fallbackName = user?.email?.split('@').first ?? 'kokomu';
     final profile = profileAsync.valueOrNull;
     final displayName = (profile?.displayName.isNotEmpty == true)
         ? profile!.displayName

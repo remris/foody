@@ -9,11 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:kokomi/main.dart';
+import 'package:kokomu/main.dart';
 
 void main() {
   testWidgets('App startet ohne Fehler', (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: KokomiApp()));
+    await tester.pumpWidget(const ProviderScope(child: kokomuApp()));
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

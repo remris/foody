@@ -157,7 +157,7 @@ class NotificationService {
 
     await _plugin.show(
       _weeklyId,
-      '📊 Deine Woche in Kokomi',
+      '📊 Deine Woche in kokomu',
       body.toString(),
       _weeklyDetails,
     );

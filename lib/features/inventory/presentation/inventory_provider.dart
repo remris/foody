@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/core/constants/food_categories.dart';
-import 'package:kokomi/core/services/notification_service.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/household/presentation/household_provider.dart';
-import 'package:kokomi/features/inventory/data/inventory_repository_impl.dart';
-import 'package:kokomi/features/inventory/domain/inventory_repository.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_list_provider.dart';
-import 'package:kokomi/models/inventory_item.dart';
+import 'package:kokomu/core/constants/food_categories.dart';
+import 'package:kokomu/core/services/notification_service.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/household/presentation/household_provider.dart';
+import 'package:kokomu/features/inventory/data/inventory_repository_impl.dart';
+import 'package:kokomu/features/inventory/domain/inventory_repository.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
+import 'package:kokomu/models/inventory_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {

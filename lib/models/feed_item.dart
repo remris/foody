@@ -1,5 +1,5 @@
-import 'package:kokomi/models/community_recipe.dart';
-import 'package:kokomi/models/community_meal_plan.dart';
+import 'package:kokomu/models/community_recipe.dart';
+import 'package:kokomu/models/community_meal_plan.dart';
 
 // ─── SocialPost ───────────────────────────────────────────────────────────────
 
@@ -21,7 +21,7 @@ class SocialPost {
   const SocialPost({
     required this.id,
     required this.userId,
-    this.authorName = 'Kokomi-User',
+    this.authorName = 'kokomu-User',
     this.avatarUrl,
     required this.text,
     this.attachedRecipeId,
@@ -37,7 +37,7 @@ class SocialPost {
   factory SocialPost.fromJson(Map<String, dynamic> json) => SocialPost(
         id: json['id'] as String,
         userId: json['user_id'] as String,
-        authorName: (json['author_name'] as String?) ?? 'Kokomi-User',
+        authorName: (json['author_name'] as String?) ?? 'kokomu-User',
         avatarUrl: json['avatar_url'] as String?,
         text: json['text'] as String,
         attachedRecipeId: json['attached_recipe_id'] as String?,
@@ -72,14 +72,14 @@ class SocialPostComment {
 
   const SocialPostComment({
     required this.id, required this.postId, required this.userId,
-    this.authorName = 'Kokomi-User', required this.text, required this.createdAt,
+    this.authorName = 'kokomu-User', required this.text, required this.createdAt,
   });
 
   factory SocialPostComment.fromJson(Map<String, dynamic> json) => SocialPostComment(
         id: json['id'] as String,
         postId: json['post_id'] as String,
         userId: json['user_id'] as String,
-        authorName: (json['author_name'] as String?) ?? 'Kokomi-User',
+        authorName: (json['author_name'] as String?) ?? 'kokomu-User',
         text: json['text'] as String,
         createdAt: DateTime.parse(json['created_at'] as String),
       );

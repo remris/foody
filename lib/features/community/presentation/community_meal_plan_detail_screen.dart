@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_provider.dart';
-import 'package:kokomi/features/community/presentation/publish_meal_plan_sheet.dart';
-import 'package:kokomi/features/meal_plan/presentation/meal_plan_provider.dart';
-import 'package:kokomi/features/meal_plan/presentation/new_meal_plan_screen.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_list_provider.dart';
-import 'package:kokomi/features/profile/presentation/profile_provider.dart';
-import 'package:kokomi/models/shopping_list.dart';
-import 'package:kokomi/models/community_meal_plan.dart';
-import 'package:kokomi/models/recipe.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_detail_screen.dart';
-import 'package:kokomi/widgets/cooking_spoon_rating.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_provider.dart';
+import 'package:kokomu/features/community/presentation/publish_meal_plan_sheet.dart';
+import 'package:kokomu/features/meal_plan/presentation/meal_plan_provider.dart';
+import 'package:kokomu/features/meal_plan/presentation/new_meal_plan_screen.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
+import 'package:kokomu/features/profile/presentation/profile_provider.dart';
+import 'package:kokomu/models/shopping_list.dart';
+import 'package:kokomu/models/community_meal_plan.dart';
+import 'package:kokomu/models/recipe.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_detail_screen.dart';
+import 'package:kokomu/widgets/cooking_spoon_rating.dart';
 
 class CommunityMealPlanDetailScreen extends ConsumerStatefulWidget {
   final CommunityMealPlan plan;

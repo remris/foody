@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/community/presentation/community_provider.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_provider.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_tab.dart';
-import 'package:kokomi/features/community/presentation/community_recipe_detail_screen.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_detail_screen.dart';
-import 'package:kokomi/features/community/presentation/publish_recipe_sheet.dart';
-import 'package:kokomi/features/community/presentation/publish_meal_plan_sheet.dart';
-import 'package:kokomi/features/community/presentation/spoonacular_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_detail_screen.dart';
-import 'package:kokomi/models/community_recipe.dart';
-import 'package:kokomi/models/community_meal_plan.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/widgets/main_shell.dart' show AppBarMoreButton;
-import 'package:kokomi/widgets/cooking_spoon_rating.dart';
+import 'package:kokomu/features/community/presentation/community_provider.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_provider.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_tab.dart';
+import 'package:kokomu/features/community/presentation/community_recipe_detail_screen.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_detail_screen.dart';
+import 'package:kokomu/features/community/presentation/publish_recipe_sheet.dart';
+import 'package:kokomu/features/community/presentation/publish_meal_plan_sheet.dart';
+import 'package:kokomu/features/community/presentation/spoonacular_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_detail_screen.dart';
+import 'package:kokomu/models/community_recipe.dart';
+import 'package:kokomu/models/community_meal_plan.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/widgets/main_shell.dart' show AppBarMoreButton;
+import 'package:kokomu/widgets/cooking_spoon_rating.dart';
 
 class CommunityScreen extends ConsumerStatefulWidget {
   const CommunityScreen({super.key});

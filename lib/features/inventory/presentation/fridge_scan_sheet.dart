@@ -2,11 +2,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:kokomi/core/constants/food_categories.dart';
-import 'package:kokomi/core/services/fridge_scan_service.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/models/inventory_item.dart';
+import 'package:kokomu/core/constants/food_categories.dart';
+import 'package:kokomu/core/services/fridge_scan_service.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/models/inventory_item.dart';
 
 /// Bottom Sheet für KI-gestützte Kühlschrank-/Vorratsfoto-Analyse.
 class FridgeScanSheet extends ConsumerStatefulWidget {

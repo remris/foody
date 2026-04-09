@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/recipes/data/saved_recipe_repository_impl.dart';
-import 'package:kokomi/features/recipes/domain/saved_recipe_repository.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/recipes/data/saved_recipe_repository_impl.dart';
+import 'package:kokomu/features/recipes/domain/saved_recipe_repository.dart';
+import 'package:kokomu/models/recipe.dart';
 
 final savedRecipeRepositoryProvider = Provider<SavedRecipeRepository>((ref) {
   return SavedRecipeRepositoryImpl();

@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/features/recipes/data/recipe_repository_impl.dart';
-import 'package:kokomi/features/recipes/domain/recipe_repository.dart';
-import 'package:kokomi/features/recipes/presentation/recent_prompts_provider.dart';
-import 'package:kokomi/features/settings/presentation/ai_usage_provider.dart';
-import 'package:kokomi/features/settings/presentation/allergen_provider.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/features/recipes/data/recipe_repository_impl.dart';
+import 'package:kokomu/features/recipes/domain/recipe_repository.dart';
+import 'package:kokomu/features/recipes/presentation/recent_prompts_provider.dart';
+import 'package:kokomu/features/settings/presentation/ai_usage_provider.dart';
+import 'package:kokomu/features/settings/presentation/allergen_provider.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/models/recipe.dart';
 
 final recipeRepositoryProvider = Provider<RecipeRepository>((ref) {
   return RecipeRepositoryImpl();

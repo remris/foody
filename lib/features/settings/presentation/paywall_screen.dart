@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/core/services/revenuecat_service.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/core/services/revenuecat_service.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 // ── Free vs. Pro Übersicht ────────────────────────────────────────────────
@@ -291,7 +291,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           child: const Icon(Icons.star_rounded, color: Colors.white, size: 40),
         ),
         const SizedBox(height: 16),
-        Text('Kokomi Pro',
+        Text('kokomu Pro',
             style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
         Text(
@@ -384,7 +384,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('🎉 Willkommen bei Kokomi Pro!'),
+            content: Text('🎉 Willkommen bei kokomu Pro!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -557,7 +557,7 @@ class _ProActiveScreen extends ConsumerWidget {
               Icon(Icons.verified_rounded,
                   size: 80, color: theme.colorScheme.primary),
               const SizedBox(height: 16),
-              Text('Du hast Kokomi Pro! ⭐',
+              Text('Du hast kokomu Pro! ⭐',
                   style: theme.textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 8),

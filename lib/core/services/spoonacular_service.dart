@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/models/recipe.dart';
 
 /// Spoonacular API Service für deutsche Rezepte.
 /// Kostenlos: 150 Punkte/Tag (ca. 1 Punkt pro Suchanfrage).

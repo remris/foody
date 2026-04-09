@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_provider.dart';
-import 'package:kokomi/features/recipes/presentation/saved_recipes_provider.dart';
-import 'package:kokomi/features/recipes/presentation/ingredient_selection_sheet.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_favorites_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_category_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_rating_provider.dart';
-import 'package:kokomi/features/recipes/presentation/cooking_streak_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_collections_provider.dart';
-import 'package:kokomi/features/recipes/presentation/ai_chat_tab.dart';
-import 'package:kokomi/features/settings/presentation/ai_usage_provider.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/features/settings/presentation/paywall_screen.dart';
-import 'package:kokomi/models/recipe.dart';
-import 'package:kokomi/widgets/main_shell.dart' show AppBarMoreButton;
+import 'package:kokomu/features/recipes/presentation/recipe_provider.dart';
+import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
+import 'package:kokomu/features/recipes/presentation/ingredient_selection_sheet.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_favorites_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_category_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_rating_provider.dart';
+import 'package:kokomu/features/recipes/presentation/cooking_streak_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_collections_provider.dart';
+import 'package:kokomu/features/recipes/presentation/ai_chat_tab.dart';
+import 'package:kokomu/features/settings/presentation/ai_usage_provider.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/features/settings/presentation/paywall_screen.dart';
+import 'package:kokomu/models/recipe.dart';
+import 'package:kokomu/widgets/main_shell.dart' show AppBarMoreButton;
 
 class RecipesScreen extends ConsumerStatefulWidget {
   /// Wenn aus dem Inventar-Screen kommend, bereits vorausgewählte Zutaten

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/household/presentation/household_chat_provider.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/household/presentation/household_chat_provider.dart';
 
 class HouseholdChatSection extends ConsumerStatefulWidget {
   const HouseholdChatSection({super.key});

@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kokomi/features/profile/presentation/profile_provider.dart';
-import 'package:kokomi/features/community/presentation/community_recipe_detail_screen.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_detail_screen.dart';
-import 'package:kokomi/features/recipes/presentation/saved_recipes_provider.dart';
-import 'package:kokomi/features/community/data/community_meal_plan_repository.dart';
-import 'package:kokomi/features/community/data/community_recipe_repository.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_provider.dart';
-import 'package:kokomi/models/community_recipe.dart';
-import 'package:kokomi/models/community_meal_plan.dart';
-import 'package:kokomi/models/feed_item.dart';
-import 'package:kokomi/models/recipe.dart';
-import 'package:kokomi/widgets/cooking_spoon_rating.dart';
+import 'package:kokomu/features/profile/presentation/profile_provider.dart';
+import 'package:kokomu/features/community/presentation/community_recipe_detail_screen.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_detail_screen.dart';
+import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
+import 'package:kokomu/features/community/data/community_meal_plan_repository.dart';
+import 'package:kokomu/features/community/data/community_recipe_repository.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_provider.dart';
+import 'package:kokomu/models/community_recipe.dart';
+import 'package:kokomu/models/community_meal_plan.dart';
+import 'package:kokomu/models/feed_item.dart';
+import 'package:kokomu/models/recipe.dart';
+import 'package:kokomu/widgets/cooking_spoon_rating.dart';
 
 // ─── Feed Screen ──────────────────────────────────────────────────────────────
 

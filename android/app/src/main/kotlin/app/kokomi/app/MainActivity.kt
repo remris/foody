@@ -1,4 +1,4 @@
-﻿package app.kokomi.app
+﻿package app.kokomu.app
 
 import io.flutter.embedding.android.FlutterActivity
 

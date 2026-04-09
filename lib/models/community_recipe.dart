@@ -1,4 +1,4 @@
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/models/recipe.dart';
 
 class CommunityRecipe {
   final String id;
@@ -57,7 +57,7 @@ class CommunityRecipe {
     return CommunityRecipe(
       id: json['id'] as String,
       userId: json['user_id'] as String,
-      authorName: (json['author_name'] as String?) ?? 'Kokomi-User',
+      authorName: (json['author_name'] as String?) ?? 'kokomu-User',
       title: json['title'] as String,
       description: (json['description'] as String?) ?? '',
       recipeJson: (json['recipe_json'] as Map<String, dynamic>?) ?? {},
@@ -205,7 +205,7 @@ class RecipeComment {
     required this.id,
     required this.recipeId,
     required this.userId,
-    this.authorName = 'Kokomi-User',
+    this.authorName = 'kokomu-User',
     required this.content,
     required this.createdAt,
   });
@@ -215,7 +215,7 @@ class RecipeComment {
       id: json['id'] as String,
       recipeId: json['recipe_id'] as String,
       userId: json['user_id'] as String,
-      authorName: (json['author_name'] as String?) ?? 'Kokomi-User',
+      authorName: (json['author_name'] as String?) ?? 'kokomu-User',
       content: json['content'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
     );

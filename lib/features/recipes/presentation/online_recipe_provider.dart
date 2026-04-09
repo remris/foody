@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/core/services/online_recipe_service.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/core/services/online_recipe_service.dart';
+import 'package:kokomu/models/recipe.dart';
 
 final onlineRecipeServiceProvider = Provider<OnlineRecipeService>((ref) {
   return OnlineRecipeService();

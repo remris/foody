@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:groq_sdk/groq_sdk.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
 
 /// Eine einzelne Chat-Nachricht.
 class ChatMessage {
@@ -66,7 +66,7 @@ class AiChatNotifier extends Notifier<AiChatState> {
     final inventoryContext = inventoryItems.isEmpty
         ? 'Kein Vorrat vorhanden.'
         : 'Vorhandene Zutaten im Vorrat: ${inventoryItems.take(30).join(', ')}.';
-    return 'Du bist ein freundlicher Küchen-Assistent für die App Kokomi. '
+    return 'Du bist ein freundlicher Küchen-Assistent für die App kokomu. '
         'Du hilfst dem User beim Kochen, gibst Rezeptvorschläge und Küchentipps. '
         'Antworte immer auf Deutsch, kurz und hilfreich. '
         '$inventoryContext '

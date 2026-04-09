@@ -5,7 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
 
 /// FCM Push Notification Service
 ///
@@ -36,7 +36,7 @@ class PushNotificationService {
   static const _fcmChannel = AndroidNotificationChannel(
     'fcm_high_importance',
     'Push-Benachrichtigungen',
-    description: 'Wichtige Benachrichtigungen von Kokomi',
+    description: 'Wichtige Benachrichtigungen von kokomu',
     importance: Importance.max,
   );
 
@@ -178,7 +178,7 @@ class PushNotificationService {
     const androidDetails = AndroidNotificationDetails(
       'fcm_high_importance',
       'Push-Benachrichtigungen',
-      channelDescription: 'Wichtige Benachrichtigungen von Kokomi',
+      channelDescription: 'Wichtige Benachrichtigungen von kokomu',
       importance: Importance.max,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',

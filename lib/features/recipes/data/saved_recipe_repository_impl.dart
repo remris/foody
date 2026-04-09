@@ -1,7 +1,7 @@
-import 'package:kokomi/core/constants/app_constants.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/features/recipes/domain/saved_recipe_repository.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/core/constants/app_constants.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/features/recipes/domain/saved_recipe_repository.dart';
+import 'package:kokomu/models/recipe.dart';
 
 class SavedRecipeRepositoryImpl implements SavedRecipeRepository {
   final _client = SupabaseService.client;

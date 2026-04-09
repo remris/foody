@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/features/household/presentation/household_provider.dart';
-import 'package:kokomi/features/profile/presentation/profile_provider.dart';
-import 'package:kokomi/core/services/offline_sync_service.dart';
-import 'package:kokomi/widgets/offline_banner.dart';
-import 'package:kokomi/features/recipes/presentation/ai_recipes_screen.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/features/household/presentation/household_provider.dart';
+import 'package:kokomu/features/profile/presentation/profile_provider.dart';
+import 'package:kokomu/core/services/offline_sync_service.dart';
+import 'package:kokomu/widgets/offline_banner.dart';
+import 'package:kokomu/features/recipes/presentation/ai_recipes_screen.dart';
 
 class MainShell extends ConsumerWidget {
   final Widget child;
@@ -233,7 +233,7 @@ class AppBarMoreButton extends ConsumerWidget {
     // Displayname: erst Profil-Name, dann E-Mail-Prefix als Fallback
     final displayName = (profile?.displayName.isNotEmpty == true)
         ? profile!.displayName
-        : (user?.email?.split('@').first ?? 'Kokomi');
+        : (user?.email?.split('@').first ?? 'kokomu');
     final initials = displayName.substring(0, 1).toUpperCase();
 
     return PopupMenuButton<_MoreAction>(

@@ -2,8 +2,8 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:kokomi/models/recipe.dart';
-import 'package:kokomi/features/meal_plan/presentation/meal_plan_provider.dart';
+import 'package:kokomu/models/recipe.dart';
+import 'package:kokomu/features/meal_plan/presentation/meal_plan_provider.dart';
 
 /// Service zum Generieren und Teilen von PDFs für Rezepte und Wochenpläne.
 class PdfExportService {
@@ -35,7 +35,7 @@ class PdfExportService {
             ),
             pw.SizedBox(height: 4),
             pw.Text(
-              'Kokomi – Dein digitales Kochbuch',
+              'kokomu – Dein digitales Kochbuch',
               style: pw.TextStyle(
                   fontSize: 10, color: PdfColor.fromHex('#888888')),
             ),
@@ -140,7 +140,7 @@ class PdfExportService {
           pw.SizedBox(height: 20),
           pw.Divider(color: PdfColor.fromHex('#E0E0E0')),
           pw.Text(
-            'Erstellt mit Kokomi · ${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}',
+            'Erstellt mit kokomu · ${DateTime.now().day}.${DateTime.now().month}.${DateTime.now().year}',
             style: pw.TextStyle(
                 fontSize: 9, color: PdfColor.fromHex('#AAAAAA')),
           ),
@@ -183,7 +183,7 @@ class PdfExportService {
                     fontSize: 22,
                     color: PdfColor.fromHex('#4CAF50'))),
             pw.Text(
-              'Kokomi – ${_weekDateRange()}',
+              'kokomu – ${_weekDateRange()}',
               style: pw.TextStyle(
                   fontSize: 10, color: PdfColor.fromHex('#888888')),
             ),

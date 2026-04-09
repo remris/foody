@@ -3,17 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-import 'package:kokomi/core/constants/color_schemes.dart';
-import 'package:kokomi/core/services/theme_provider.dart';
-import 'package:kokomi/core/services/seed_data_service.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/features/settings/presentation/ai_usage_provider.dart';
-import 'package:kokomi/features/settings/presentation/paywall_screen.dart';
-import 'package:kokomi/features/settings/presentation/allergen_provider.dart';
-import 'package:kokomi/features/household/presentation/household_provider.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/core/services/locale_provider.dart';
+import 'package:kokomu/core/constants/color_schemes.dart';
+import 'package:kokomu/core/services/theme_provider.dart';
+import 'package:kokomu/core/services/seed_data_service.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/features/settings/presentation/ai_usage_provider.dart';
+import 'package:kokomu/features/settings/presentation/paywall_screen.dart';
+import 'package:kokomu/features/settings/presentation/allergen_provider.dart';
+import 'package:kokomu/features/household/presentation/household_provider.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/core/services/locale_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -270,7 +270,7 @@ class SettingsScreen extends ConsumerWidget {
 
           Center(
             child: Text(
-              'Kokomi v1.0.0',
+              'kokomu v1.0.0',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -904,7 +904,7 @@ class _PlanCard extends ConsumerWidget {
                       Row(
                         children: [
                           Text(
-                            isPro ? 'Kokomi Pro' : 'Kokomi Free',
+                            isPro ? 'kokomu Pro' : 'kokomu Free',
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -1246,7 +1246,7 @@ class _PrivacyPolicyDialog extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Wir nehmen den Schutz deiner Daten ernst. Diese Datenschutzerklärung informiert dich über die Erhebung, Verarbeitung und Nutzung deiner Daten in der Kokomi-App.\n\n'
+                'Wir nehmen den Schutz deiner Daten ernst. Diese Datenschutzerklärung informiert dich über die Erhebung, Verarbeitung und Nutzung deiner Daten in der kokomu-App.\n\n'
                 'Durch die Nutzung der App stimmst du der Erhebung und Verwendung deiner Daten gemäß dieser Erklärung zu.\n\n'
                 'Wenn du Fragen oder Bedenken hast, kontaktiere uns bitte über die App oder unsere Website.',
                 style: theme.textTheme.bodyMedium,
@@ -1258,7 +1258,7 @@ class _PrivacyPolicyDialog extends StatelessWidget {
                 child: FilledButton(
                   onPressed: () {
                     // Link zur Datenschutzerklärung öffnen
-                    launchUrlString('https://www.Kokomi.app/datenschutz');
+                    launchUrlString('https://www.kokomu.app/datenschutz');
                   },
                   child: const Text('Zur Datenschutzerklärung'),
                 ),

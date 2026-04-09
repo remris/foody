@@ -2,7 +2,7 @@ class AppConstants {
   AppConstants._();
 
   // App
-  static const String appName = 'Kokomi';
+  static const String appName = 'kokomu';
 
   // Supabase Tables
   static const String tableIngredients = 'ingredients';

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:kokomi/core/constants/color_schemes.dart';
+import 'package:kokomu/core/constants/color_schemes.dart';
 
 class AppTheme {
   AppTheme._();
 
   /// Erzeugt das Light-Theme basierend auf dem gewählten Farbschema.
-  static ThemeData light([AppColorScheme scheme = AppColorScheme.kokomi]) {
+  static ThemeData light([AppColorScheme scheme = AppColorScheme.kokomu]) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: scheme.seedColor,
       secondary: scheme.accentColor,
@@ -16,7 +16,7 @@ class AppTheme {
   }
 
   /// Erzeugt das Dark-Theme basierend auf dem gewählten Farbschema.
-  static ThemeData dark([AppColorScheme scheme = AppColorScheme.kokomi]) {
+  static ThemeData dark([AppColorScheme scheme = AppColorScheme.kokomu]) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: scheme.seedColor,
       secondary: scheme.accentColor,

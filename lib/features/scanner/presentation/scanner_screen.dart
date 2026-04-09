@@ -3,15 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/features/household/presentation/household_provider.dart';
-import 'package:kokomi/features/scanner/presentation/scanner_provider.dart';
-import 'package:kokomi/features/scanner/presentation/scanned_products_provider.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_list_provider.dart';
-import 'package:kokomi/models/inventory_item.dart';
-import 'package:kokomi/widgets/nutri_score_badge.dart';
-import 'package:kokomi/widgets/main_shell.dart' show AppBarMoreButton;
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/features/household/presentation/household_provider.dart';
+import 'package:kokomu/features/scanner/presentation/scanner_provider.dart';
+import 'package:kokomu/features/scanner/presentation/scanned_products_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
+import 'package:kokomu/models/inventory_item.dart';
+import 'package:kokomu/widgets/nutri_score_badge.dart';
+import 'package:kokomu/widgets/main_shell.dart' show AppBarMoreButton;
 
 class ScannerScreen extends ConsumerStatefulWidget {
   const ScannerScreen({super.key});

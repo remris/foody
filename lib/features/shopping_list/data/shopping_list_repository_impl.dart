@@ -1,8 +1,8 @@
-import 'package:kokomi/core/constants/app_constants.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/features/shopping_list/domain/shopping_list_repository.dart';
-import 'package:kokomi/models/shopping_list.dart';
-import 'package:kokomi/models/shopping_list_item.dart';
+import 'package:kokomu/core/constants/app_constants.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/features/shopping_list/domain/shopping_list_repository.dart';
+import 'package:kokomu/models/shopping_list.dart';
+import 'package:kokomu/models/shopping_list_item.dart';
 
 class ShoppingListRepositoryImpl implements ShoppingListRepository {
   final _client = SupabaseService.client;

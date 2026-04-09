@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kokomi/core/constants/color_schemes.dart';
+import 'package:kokomu/core/constants/color_schemes.dart';
 
 const _colorSchemeKey = 'app_color_scheme';
 const _themeModeKey = 'app_theme_mode';
@@ -22,7 +22,7 @@ class ColorSchemeNotifier extends Notifier<AppColorScheme> {
   @override
   AppColorScheme build() {
     _loadFromPrefs();
-    return AppColorScheme.kokomi; // Default
+    return AppColorScheme.kokomu; // Default
   }
 
   Future<void> _loadFromPrefs() async {
@@ -31,7 +31,7 @@ class ColorSchemeNotifier extends Notifier<AppColorScheme> {
     if (saved != null) {
       final scheme = AppColorScheme.values.firstWhere(
         (s) => s.name == saved,
-        orElse: () => AppColorScheme.kokomi,
+        orElse: () => AppColorScheme.kokomu,
       );
       state = scheme;
     }

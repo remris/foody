@@ -4,21 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/features/recipes/presentation/saved_recipes_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_rating_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_notes_provider.dart';
-import 'package:kokomi/features/recipes/presentation/cooking_mode_screen.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_favorites_provider.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_list_provider.dart';
-import 'package:kokomi/widgets/meal_plan_picker_sheet.dart';
-import 'package:kokomi/models/recipe.dart';
-import 'package:kokomi/widgets/cooking_spoon_rating.dart';
-import 'package:kokomi/features/community/presentation/community_provider.dart';
-import 'package:kokomi/features/community/presentation/publish_recipe_sheet.dart';
-import 'package:kokomi/models/community_recipe.dart';
-import 'package:kokomi/core/constants/staple_ingredients.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_rating_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_notes_provider.dart';
+import 'package:kokomu/features/recipes/presentation/cooking_mode_screen.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_favorites_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
+import 'package:kokomu/widgets/meal_plan_picker_sheet.dart';
+import 'package:kokomu/models/recipe.dart';
+import 'package:kokomu/widgets/cooking_spoon_rating.dart';
+import 'package:kokomu/features/community/presentation/community_provider.dart';
+import 'package:kokomu/features/community/presentation/publish_recipe_sheet.dart';
+import 'package:kokomu/models/community_recipe.dart';
+import 'package:kokomu/core/constants/staple_ingredients.dart';
 
 class RecipeDetailScreen extends ConsumerStatefulWidget {
   final FoodRecipe recipe;
@@ -191,7 +191,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
     for (var i = 0; i < recipe.steps.length; i++) {
       buffer.writeln('${i + 1}. ${recipe.steps[i]}');
     }
-    buffer.writeln('\n— gesendet mit Kokomi');
+    buffer.writeln('\n— gesendet mit kokomu');
     SharePlus.instance.share(ShareParams(text: buffer.toString()));
   }
 
@@ -787,7 +787,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
     if (confirmed != true || !context.mounted) return;
 
     final user = SupabaseService.client.auth.currentUser;
-    final authorName = user?.email?.split('@').first ?? 'Kokomi-User';
+    final authorName = user?.email?.split('@').first ?? 'kokomu-User';
 
     final communityRecipe = CommunityRecipe.fromFoodRecipe(
       recipe,

@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:kokomi/core/services/groq_proxy_service.dart';
-import 'package:kokomi/core/services/local_recipe_service.dart';
-import 'package:kokomi/core/services/recipe_cache_service.dart';
-import 'package:kokomi/features/recipes/domain/recipe_repository.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/core/services/groq_proxy_service.dart';
+import 'package:kokomu/core/services/local_recipe_service.dart';
+import 'package:kokomu/core/services/recipe_cache_service.dart';
+import 'package:kokomu/features/recipes/domain/recipe_repository.dart';
+import 'package:kokomu/models/recipe.dart';
 
 class RecipeRepositoryImpl implements RecipeRepository {
   final _groqService = GroqProxyService();

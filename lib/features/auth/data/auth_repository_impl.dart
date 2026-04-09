@@ -1,16 +1,22 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/features/auth/domain/auth_repository.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/features/auth/domain/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final _client = SupabaseService.client;
+
+  static const _redirectUrl = 'kokomu://auth/confirm';
 
   @override
   Future<AuthResponse> signUp({
     required String email,
     required String password,
   }) async {
-    return await _client.auth.signUp(email: email, password: password);
+    return await _client.auth.signUp(
+      email: email,
+      password: password,
+      emailRedirectTo: _redirectUrl,
+    );
   }
 
   @override
@@ -23,6 +29,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final response = await _client.auth.signUp(
       email: email,
       password: password,
+      emailRedirectTo: _redirectUrl,
       data: {
         'display_name': displayName,
         'referral_source': referralSource ?? '',
@@ -59,7 +66,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> resetPassword(String email) async {
-    await _client.auth.resetPasswordForEmail(email);
+    await _client.auth.resetPasswordForEmail(
+      email,
+      redirectTo: _redirectUrl,
+    );
   }
 
   @override

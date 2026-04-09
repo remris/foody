@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kokomi/features/profile/presentation/profile_provider.dart';
-import 'package:kokomi/models/user_profile.dart';
+import 'package:kokomu/features/profile/presentation/profile_provider.dart';
+import 'package:kokomu/models/user_profile.dart';
 
 /// Zeigt entweder die Follower- oder die Following-Liste eines Users.
 class FollowersScreen extends ConsumerWidget {
@@ -132,7 +132,7 @@ class _UserTile extends ConsumerWidget {
                 )),
       ),
       title: Text(
-        profile.displayName.isNotEmpty ? profile.displayName : 'Kokomi-User',
+        profile.displayName.isNotEmpty ? profile.displayName : 'kokomu-User',
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
       subtitle: profile.bio.isNotEmpty

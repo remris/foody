@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const _kLocaleKey = 'app_locale';
 
-/// Unterstützte Sprachen in Kokomi
+/// Unterstützte Sprachen in kokomu
 enum AppLanguage {
   system('System', null, '🌐'),
   german('Deutsch', Locale('de'), '🇩🇪'),

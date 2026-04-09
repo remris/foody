@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/household/presentation/household_provider.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/household/presentation/household_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ─────────────────────────────────────────────────────────

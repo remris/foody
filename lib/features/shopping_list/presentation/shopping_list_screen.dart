@@ -5,27 +5,27 @@ import 'package:confetti/confetti.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:kokomi/features/household/presentation/household_provider.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/scanner/presentation/scanner_provider.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_list_provider.dart';
-import 'package:kokomi/features/shopping_list/presentation/staple_items_provider.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_templates_provider.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_category.dart';
-import 'package:kokomi/features/shopping_list/presentation/item_prices_provider.dart';
-import 'package:kokomi/features/shopping_list/presentation/transfer_to_inventory_sheet.dart';
-import 'package:kokomi/features/shopping_list/presentation/smart_suggestions_provider.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_stats_provider.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_stats_sheet.dart';
-import 'package:kokomi/widgets/main_shell.dart' show AppBarMoreButton;
-import 'package:kokomi/core/services/shopping_list_ocr_service.dart';
-import 'package:kokomi/core/data/ingredient_catalog.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/models/inventory_item.dart';
-import 'package:kokomi/models/shopping_list.dart';
-import 'package:kokomi/models/shopping_list_item.dart';
-import 'package:kokomi/widgets/skeleton_loader.dart';
-import 'package:kokomi/features/pantry/presentation/pantry_shopping_screen.dart' show PantryTabBar, pantryTabNotifier;
+import 'package:kokomu/features/household/presentation/household_provider.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/scanner/presentation/scanner_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/staple_items_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_templates_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_category.dart';
+import 'package:kokomu/features/shopping_list/presentation/item_prices_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/transfer_to_inventory_sheet.dart';
+import 'package:kokomu/features/shopping_list/presentation/smart_suggestions_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_stats_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_stats_sheet.dart';
+import 'package:kokomu/widgets/main_shell.dart' show AppBarMoreButton;
+import 'package:kokomu/core/services/shopping_list_ocr_service.dart';
+import 'package:kokomu/core/data/ingredient_catalog.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/models/inventory_item.dart';
+import 'package:kokomu/models/shopping_list.dart';
+import 'package:kokomu/models/shopping_list_item.dart';
+import 'package:kokomu/widgets/skeleton_loader.dart';
+import 'package:kokomu/features/pantry/presentation/pantry_shopping_screen.dart' show PantryTabBar, pantryTabNotifier;
 
 class ShoppingListScreen extends ConsumerStatefulWidget {
   const ShoppingListScreen({super.key});
@@ -89,7 +89,7 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
         buffer.writeln('☑ ${item.name}');
       }
     }
-    buffer.writeln('\n— gesendet mit Kokomi');
+    buffer.writeln('\n— gesendet mit kokomu');
 
     SharePlus.instance.share(ShareParams(text: buffer.toString()));
   }

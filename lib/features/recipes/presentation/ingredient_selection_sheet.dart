@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
 
 /// BottomSheet zur Auswahl von Zutaten aus dem Inventar für die Rezeptgenerierung.
 class IngredientSelectionSheet extends ConsumerStatefulWidget {

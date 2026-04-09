@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_provider.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_detail_screen.dart';
-import 'package:kokomi/models/community_meal_plan.dart';
-import 'package:kokomi/widgets/cooking_spoon_rating.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_provider.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_detail_screen.dart';
+import 'package:kokomu/models/community_meal_plan.dart';
+import 'package:kokomu/widgets/cooking_spoon_rating.dart';
 
 /// Tab im Community-Screen: Wochenpläne entdecken
 class CommunityMealPlanTab extends ConsumerStatefulWidget {

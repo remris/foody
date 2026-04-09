@@ -1,4 +1,4 @@
-import 'package:kokomi/core/data/ingredient_catalog.dart';
+import 'package:kokomu/core/data/ingredient_catalog.dart';
 
 /// Zentrale Liste von Basisgewürzen und -zutaten die als immer vorhanden
 /// gelten und NICHT als "fehlend" im Vorrat angezeigt werden sollen.

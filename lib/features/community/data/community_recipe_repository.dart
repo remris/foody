@@ -1,6 +1,6 @@
 import 'dart:math';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/models/community_recipe.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/models/community_recipe.dart';
 
 class CommunityRecipeRepository {
   static const _table = 'community_recipes';
@@ -16,7 +16,7 @@ class CommunityRecipeRepository {
 
   /// E-Mail-Prefix als Display-Name
   String get currentAuthorName =>
-      _client.auth.currentUser?.email?.split('@').first ?? 'Kokomi-User';
+      _client.auth.currentUser?.email?.split('@').first ?? 'kokomu-User';
 
   // ─── Feed ────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/core/services/revenuecat_service.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/core/services/revenuecat_service.dart';
 
 /// Abo-Status des aktuellen Users.
 /// Phase 1: Supabase `subscriptions`-Tabelle, manuell setzbar.

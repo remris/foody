@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/core/services/connectivity_service.dart';
+import 'package:kokomu/core/services/connectivity_service.dart';
 
 /// Zeigt oben im App-Body ein Banner wenn keine Internetverbindung besteht.
 class OfflineBanner extends ConsumerWidget {

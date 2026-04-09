@@ -170,7 +170,7 @@ class LocalDatabase extends _$LocalDatabase {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'Kokomi_offline.db'));
+    final file = File(p.join(dir.path, 'kokomu_offline.db'));
     return NativeDatabase.createInBackground(file);
   });
 }

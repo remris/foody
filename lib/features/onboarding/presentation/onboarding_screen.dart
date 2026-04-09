@@ -21,11 +21,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   static const _pages = [
     _OnboardingPage(
       emoji: '',
-      title: 'Willkommen bei Kokomi!',
+      title: 'Willkommen bei kokomu!',
       subtitle: 'Dein smarter Küchenhelfer',
       description:
           'Schluss mit abgelaufenen Lebensmitteln und leeren Kühlschränken.\n'
-          'Kokomi hilft dir, deinen Alltag in der Küche einfacher zu machen.',
+          'kokomu hilft dir, deinen Alltag in der Küche einfacher zu machen.',
       color: Color(0xFF3D6B8F),
       features: [],
       showLogo: true,
@@ -36,7 +36,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       subtitle: 'In Sekunden erfasst',
       description:
           'Scanne einfach den Barcode deiner Lebensmittel.\n'
-          'Kokomi erkennt das Produkt und fügt es automatisch\n'
+          'kokomu erkennt das Produkt und fügt es automatisch\n'
           'deinem Vorrat hinzu.',
       color: Color(0xFF2E5F7A),
       features: [
@@ -52,7 +52,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       subtitle: 'Kochen aus dem Vorrat',
       description:
           'Was soll ich heute kochen?\n'
-          'Kokomi schlägt dir Rezepte vor, die genau\n'
+          'kokomu schlägt dir Rezepte vor, die genau\n'
           'zu deinen vorhandenen Zutaten passen.',
       color: Color(0xFF2A5470),
       features: [
@@ -68,7 +68,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       subtitle: 'Teile & entdecke',
       description:
           'Teile deine Rezepte und Wochenpläne\n'
-          'mit der Kokomi-Community und entdecke\n'
+          'mit der kokomu-Community und entdecke\n'
           'Ideen von anderen Köchen.',
       color: Color(0xFF1E4A63),
       features: [

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_list_provider.dart';
-import 'package:kokomi/models/inventory_item.dart';
-import 'package:kokomi/models/shopping_list_item.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
+import 'package:kokomu/models/inventory_item.dart';
+import 'package:kokomu/models/shopping_list_item.dart';
 
 /// Sheet zur Übernahme abgehakter Einkaufslisteneinträge ins Inventar.
 class TransferToInventorySheet extends ConsumerStatefulWidget {

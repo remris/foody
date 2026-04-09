@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kokomi/core/utils/extensions.dart';
-import 'package:kokomi/core/constants/food_categories.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/features/household/presentation/household_provider.dart';
-import 'package:kokomi/features/inventory/presentation/add_inventory_item_sheet.dart';
-import 'package:kokomi/features/inventory/presentation/fridge_scan_sheet.dart';
-import 'package:kokomi/features/recipes/presentation/ingredient_selection_sheet.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_stats_card.dart';
-import 'package:kokomi/models/inventory_item.dart';
-import 'package:kokomi/widgets/skeleton_loader.dart';
-import 'package:kokomi/widgets/nutri_score_badge.dart';
-import 'package:kokomi/widgets/main_shell.dart' show AppBarMoreButton;
-import 'package:kokomi/features/pantry/presentation/pantry_shopping_screen.dart' show PantryTabBar, pantryTabNotifier;
+import 'package:kokomu/core/utils/extensions.dart';
+import 'package:kokomu/core/constants/food_categories.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/features/household/presentation/household_provider.dart';
+import 'package:kokomu/features/inventory/presentation/add_inventory_item_sheet.dart';
+import 'package:kokomu/features/inventory/presentation/fridge_scan_sheet.dart';
+import 'package:kokomu/features/recipes/presentation/ingredient_selection_sheet.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_stats_card.dart';
+import 'package:kokomu/models/inventory_item.dart';
+import 'package:kokomu/widgets/skeleton_loader.dart';
+import 'package:kokomu/widgets/nutri_score_badge.dart';
+import 'package:kokomu/widgets/main_shell.dart' show AppBarMoreButton;
+import 'package:kokomu/features/pantry/presentation/pantry_shopping_screen.dart' show PantryTabBar, pantryTabNotifier;
 
 class InventoryScreen extends ConsumerStatefulWidget {
   const InventoryScreen({super.key});
@@ -1018,7 +1018,7 @@ class _EmptyInventory extends StatelessWidget {
                   size: 64, color: theme.colorScheme.primary),
             ),
             const SizedBox(height: 24),
-            Text('Willkommen bei Kokomi! 👋',
+            Text('Willkommen bei kokomu! 👋',
                 style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(

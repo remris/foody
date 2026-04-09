@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:kokomi/core/constants/app_constants.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
+import 'package:kokomu/core/constants/app_constants.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
 
 /// Verwaltet Supabase Realtime-Subscriptions für Einkaufslisten.
 ///

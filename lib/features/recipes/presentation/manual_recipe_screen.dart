@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
-import 'package:kokomi/core/data/ingredient_catalog.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/features/recipes/presentation/saved_recipes_provider.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/core/data/ingredient_catalog.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
+import 'package:kokomu/models/recipe.dart';
 
 // Alle verfügbaren Einheiten â€“ sortiert nach HÃ¤ufigkeit
 const _kUnits = [

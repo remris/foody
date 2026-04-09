@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/nutrition/presentation/nutrition_provider.dart';
+import 'package:kokomu/features/nutrition/presentation/nutrition_provider.dart';
 
 /// Bottom Sheet zum Einrichten des Ernährungsprofils.
 class NutritionProfileSheet extends ConsumerStatefulWidget {

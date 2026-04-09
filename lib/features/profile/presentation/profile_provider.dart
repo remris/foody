@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/profile/data/user_profile_repository.dart';
-import 'package:kokomi/models/user_profile.dart';
-import 'package:kokomi/models/community_recipe.dart';
-import 'package:kokomi/models/community_meal_plan.dart';
-import 'package:kokomi/models/feed_item.dart';
+import 'package:kokomu/features/profile/data/user_profile_repository.dart';
+import 'package:kokomu/models/user_profile.dart';
+import 'package:kokomu/models/community_recipe.dart';
+import 'package:kokomu/models/community_meal_plan.dart';
+import 'package:kokomu/models/feed_item.dart';
 
 // ─── Repository ──────────────────────────────────────────────────────────────
 

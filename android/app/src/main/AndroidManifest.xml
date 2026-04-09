@@ -1,4 +1,4 @@
-﻿<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+﻿﻿<manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Kamera für Barcode-Scanner -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
@@ -14,7 +14,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
-        android:label="Kokomi"
+        android:label="kokomu"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -37,6 +37,13 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- Deep Link für Supabase Auth (Email-Bestätigung, Passwort-Reset) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="kokomu" android:host="auth"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

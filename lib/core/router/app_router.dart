@@ -1,36 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/auth/presentation/login_screen.dart';
-import 'package:kokomi/features/auth/presentation/register_screen.dart';
-import 'package:kokomi/features/auth/presentation/forgot_password_screen.dart';
-import 'package:kokomi/features/inventory/presentation/item_detail_screen.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_detail_screen.dart';
-import 'package:kokomi/features/recipes/presentation/manual_recipe_screen.dart';
-import 'package:kokomi/features/recipes/presentation/kitchen_screen.dart';
-import 'package:kokomi/features/recipes/presentation/ai_recipes_screen.dart';
-import 'package:kokomi/features/scanner/presentation/scanner_screen.dart';
-import 'package:kokomi/features/scanner/presentation/receipt_scanner_screen.dart';
-import 'package:kokomi/features/settings/presentation/settings_screen.dart';
-import 'package:kokomi/features/settings/presentation/paywall_screen.dart';
-import 'package:kokomi/features/household/presentation/household_screen.dart';
-import 'package:kokomi/features/nutrition/presentation/nutrition_screen.dart';
-import 'package:kokomi/features/meal_plan/presentation/meal_plan_screen.dart';
-import 'package:kokomi/features/meal_plan/presentation/new_meal_plan_screen.dart';
-import 'package:kokomi/features/community/presentation/discover_screen.dart';
-import 'package:kokomi/features/onboarding/presentation/onboarding_screen.dart';
-import 'package:kokomi/features/onboarding/presentation/welcome_after_registration_screen.dart';
-import 'package:kokomi/features/dashboard/presentation/dashboard_screen.dart';
-import 'package:kokomi/features/profile/presentation/profile_screen.dart';
-import 'package:kokomi/features/profile/presentation/public_profile_screen.dart';
-import 'package:kokomi/features/profile/presentation/edit_profile_screen.dart';
-import 'package:kokomi/features/profile/presentation/followers_screen.dart';
-import 'package:kokomi/features/pantry/presentation/pantry_shopping_screen.dart';
-import 'package:kokomi/main.dart' show onboardingCompleteProvider;
-import 'package:kokomi/models/recipe.dart' show FoodRecipe;
-import 'package:kokomi/models/inventory_item.dart' show InventoryItem;
-import 'package:kokomi/widgets/main_shell.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/auth/presentation/login_screen.dart';
+import 'package:kokomu/features/auth/presentation/register_screen.dart';
+import 'package:kokomu/features/auth/presentation/forgot_password_screen.dart';
+import 'package:kokomu/features/inventory/presentation/item_detail_screen.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_detail_screen.dart';
+import 'package:kokomu/features/recipes/presentation/manual_recipe_screen.dart';
+import 'package:kokomu/features/recipes/presentation/kitchen_screen.dart';
+import 'package:kokomu/features/recipes/presentation/ai_recipes_screen.dart';
+import 'package:kokomu/features/scanner/presentation/scanner_screen.dart';
+import 'package:kokomu/features/scanner/presentation/receipt_scanner_screen.dart';
+import 'package:kokomu/features/settings/presentation/settings_screen.dart';
+import 'package:kokomu/features/settings/presentation/paywall_screen.dart';
+import 'package:kokomu/features/household/presentation/household_screen.dart';
+import 'package:kokomu/features/nutrition/presentation/nutrition_screen.dart';
+import 'package:kokomu/features/meal_plan/presentation/meal_plan_screen.dart';
+import 'package:kokomu/features/meal_plan/presentation/new_meal_plan_screen.dart';
+import 'package:kokomu/features/community/presentation/discover_screen.dart';
+import 'package:kokomu/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:kokomu/features/onboarding/presentation/welcome_after_registration_screen.dart';
+import 'package:kokomu/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:kokomu/features/profile/presentation/profile_screen.dart';
+import 'package:kokomu/features/profile/presentation/public_profile_screen.dart';
+import 'package:kokomu/features/profile/presentation/edit_profile_screen.dart';
+import 'package:kokomu/features/profile/presentation/followers_screen.dart';
+import 'package:kokomu/features/pantry/presentation/pantry_shopping_screen.dart';
+import 'package:kokomu/main.dart' show onboardingCompleteProvider;
+import 'package:kokomu/models/recipe.dart' show FoodRecipe;
+import 'package:kokomu/models/inventory_item.dart' show InventoryItem;
+import 'package:kokomu/widgets/main_shell.dart';
 
 /// Sicherer Cast: FoodRecipe direkt, Map → fromJson, sonst Fallback
 FoodRecipe _extraToFoodRecipe(Object? extra) {
@@ -122,6 +122,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/forgot-password',
         builder: (_, __) => const ForgotPasswordScreen(),
+      ),
+      // Deep Link von Supabase E-Mail (Bestätigung / Passwort-Reset)
+      GoRoute(
+        path: '/auth/confirm',
+        redirect: (context, state) {
+          // Supabase verarbeitet den Token automatisch über den Deep Link.
+          // Wir leiten einfach auf Home oder Login weiter.
+          final user = ref.read(currentUserProvider);
+          return user != null ? '/home' : '/login';
+        },
       ),
       GoRoute(
         path: '/welcome-registered',

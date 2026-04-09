@@ -1,4 +1,4 @@
-# Kokomi – App-Verbesserungen Tracker
+# kokomu – App-Verbesserungen Tracker
 
 ## Plan: 8 App-Verbesserungen & Bug-Fixes (alle erledigt ✅)
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_screen.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_list_screen.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_screen.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_list_screen.dart';
 
 /// Globaler Notifier für den aktiven Pantry-Tab (0=Einkauf, 1=Vorrat).
 /// Wird von PantryTabBar in Shopping- und InventoryScreen gelesen/geschrieben.

@@ -3,16 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:kokomi/features/community/presentation/community_provider.dart';
-import 'package:kokomi/features/recipes/presentation/cooking_mode_screen.dart';
-import 'package:kokomi/features/recipes/presentation/saved_recipes_provider.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_list_provider.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/models/community_recipe.dart';
-import 'package:kokomi/models/recipe.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/widgets/cooking_spoon_rating.dart';
-import 'package:kokomi/widgets/meal_plan_picker_sheet.dart';
+import 'package:kokomu/features/community/presentation/community_provider.dart';
+import 'package:kokomu/features/recipes/presentation/cooking_mode_screen.dart';
+import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/models/community_recipe.dart';
+import 'package:kokomu/models/recipe.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/widgets/cooking_spoon_rating.dart';
+import 'package:kokomu/widgets/meal_plan_picker_sheet.dart';
 
 class CommunityRecipeDetailScreen extends ConsumerStatefulWidget {
   final CommunityRecipe recipe;
@@ -186,7 +186,7 @@ class _CommunityRecipeDetailScreenState
     final foodRecipe = _recipe.toFoodRecipe();
     final sb = StringBuffer();
     sb.writeln('🍽️ ${_recipe.title}');
-    sb.writeln('von ${_recipe.authorName} – geteilt über Kokomi');
+    sb.writeln('von ${_recipe.authorName} – geteilt über kokomu');
     sb.writeln();
     sb.writeln('⏱ ${_recipe.cookingTimeMinutes} Min. · 👤 ${_recipe.servings} Portionen · ${_recipe.difficulty}');
     sb.writeln();

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/core/utils/extensions.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/widgets/nutri_score_badge.dart';
+import 'package:kokomu/core/utils/extensions.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/widgets/nutri_score_badge.dart';
 
 /// Kompakte einklappbare Vorrats-Statistik-Zeile.
 /// Standard: eine schmale Zeile mit Farbbalken + Zähler.

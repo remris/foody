@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/meal_plan/presentation/meal_plan_provider.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/features/meal_plan/presentation/meal_plan_provider.dart';
+import 'package:kokomu/models/recipe.dart';
 
 /// Zeigt ein BottomSheet zum Hinzufügen eines Rezepts zum Wochenplan.
 /// Tag-Auswahl als Chips, darunter Slot-Auswahl als Chips.

@@ -1,7 +1,7 @@
-import 'package:kokomi/core/constants/app_constants.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/features/inventory/domain/inventory_repository.dart';
-import 'package:kokomi/models/inventory_item.dart';
+import 'package:kokomu/core/constants/app_constants.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/features/inventory/domain/inventory_repository.dart';
+import 'package:kokomu/models/inventory_item.dart';
 
 class InventoryRepositoryImpl implements InventoryRepository {
   final _client = SupabaseService.client;

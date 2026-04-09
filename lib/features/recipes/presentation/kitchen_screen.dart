@@ -2,28 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_provider.dart';
-import 'package:kokomi/features/recipes/presentation/saved_recipes_provider.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_favorites_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_category_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_rating_provider.dart';
-import 'package:kokomi/features/recipes/presentation/cooking_streak_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_collections_provider.dart';
-// import 'package:kokomi/features/recipes/presentation/ai_chat_tab.dart'; // Küchenassistent deaktiviert
-import 'package:kokomi/features/meal_plan/presentation/meal_plan_screen.dart';
-import 'package:kokomi/features/meal_plan/presentation/meal_plan_provider.dart';
-import 'package:kokomi/features/settings/presentation/ai_usage_provider.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/features/settings/presentation/paywall_screen.dart';
-import 'package:kokomi/features/community/presentation/community_provider.dart';
-import 'package:kokomi/features/community/presentation/publish_recipe_sheet.dart';
-import 'package:kokomi/models/recipe.dart';
-import 'package:kokomi/widgets/main_shell.dart' show AppBarMoreButton;
-import 'package:kokomi/features/shopping_list/presentation/shopping_list_provider.dart';
-import 'package:kokomi/widgets/meal_plan_picker_sheet.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_detail_screen.dart';
-import 'package:kokomi/core/constants/staple_ingredients.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_provider.dart';
+import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_favorites_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_category_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_rating_provider.dart';
+import 'package:kokomu/features/recipes/presentation/cooking_streak_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_collections_provider.dart';
+// import 'package:kokomu/features/recipes/presentation/ai_chat_tab.dart'; // Küchenassistent deaktiviert
+import 'package:kokomu/features/meal_plan/presentation/meal_plan_screen.dart';
+import 'package:kokomu/features/meal_plan/presentation/meal_plan_provider.dart';
+import 'package:kokomu/features/settings/presentation/ai_usage_provider.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/features/settings/presentation/paywall_screen.dart';
+import 'package:kokomu/features/community/presentation/community_provider.dart';
+import 'package:kokomu/features/community/presentation/publish_recipe_sheet.dart';
+import 'package:kokomu/models/recipe.dart';
+import 'package:kokomu/widgets/main_shell.dart' show AppBarMoreButton;
+import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
+import 'package:kokomu/widgets/meal_plan_picker_sheet.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_detail_screen.dart';
+import 'package:kokomu/core/constants/staple_ingredients.dart';
 
 class KitchenScreen extends ConsumerStatefulWidget {
   final int initialTab; // 0=Gespeichert, 1=Wochenplan

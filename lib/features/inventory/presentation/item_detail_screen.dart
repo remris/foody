@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/core/constants/food_categories.dart';
-import 'package:kokomi/features/scanner/data/scanner_repository_impl.dart';
-import 'package:kokomi/features/scanner/domain/scanner_repository.dart';
-import 'package:kokomi/models/inventory_item.dart';
-import 'package:kokomi/models/product_details.dart';
+import 'package:kokomu/core/constants/food_categories.dart';
+import 'package:kokomu/features/scanner/data/scanner_repository_impl.dart';
+import 'package:kokomu/features/scanner/domain/scanner_repository.dart';
+import 'package:kokomu/models/inventory_item.dart';
+import 'package:kokomu/models/product_details.dart';
 
 final scannerRepoProvider = Provider<ScannerRepository>((ref) {
   return ScannerRepositoryImpl();

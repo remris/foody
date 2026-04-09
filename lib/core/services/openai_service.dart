@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:kokomi/core/constants/app_constants.dart';
+import 'package:kokomu/core/constants/app_constants.dart';
 
 class OpenAiService {
   // Dio-Instanz ohne festen Auth-Header – Key wird per Request gelesen

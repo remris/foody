@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/core/services/notification_service.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/household/data/household_repository.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/models/household.dart';
+import 'package:kokomu/core/services/notification_service.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/household/data/household_repository.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/models/household.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Aktivitätslog-Eintrag

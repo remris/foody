@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/shopping_list/presentation/shopping_stats_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_stats_provider.dart';
 
 /// Bottom Sheet mit Einkaufslisten-Statistiken.
 class ShoppingStatsSheet extends ConsumerWidget {

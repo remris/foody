@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_provider.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_favorites_provider.dart';
-import 'package:kokomi/features/settings/presentation/ai_usage_provider.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/features/settings/presentation/paywall_screen.dart';
-import 'package:kokomi/features/community/presentation/community_provider.dart';
-import 'package:kokomi/features/recipes/presentation/recipe_detail_screen.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_provider.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_favorites_provider.dart';
+import 'package:kokomu/features/settings/presentation/ai_usage_provider.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/features/settings/presentation/paywall_screen.dart';
+import 'package:kokomu/features/community/presentation/community_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_detail_screen.dart';
+import 'package:kokomu/models/recipe.dart';
 import 'package:flutter/services.dart';
 
 /// Vollbild-Screen für KI-Rezeptgenerierung – erreichbar über FAB

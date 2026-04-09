@@ -1,4 +1,4 @@
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/models/recipe.dart';
 
 abstract class RecipeRepository {
   Future<List<FoodRecipe>> getSuggestedRecipes(

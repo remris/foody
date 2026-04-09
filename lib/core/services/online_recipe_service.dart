@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:groq_sdk/groq_sdk.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/models/recipe.dart';
 
 /// Service für Online-Rezeptsuche über TheMealDB API (kostenlos).
 /// Übersetzt Ergebnisse automatisch ins Deutsche via Groq.

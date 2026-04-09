@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -56,7 +56,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 60),
-                // Kokomi Logo
+                // kokomu Logo
                 Center(
                   child: Image.asset(
                     'assets/icon/foody_icon2-Photoroom.png',
@@ -67,7 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Kokomi',
+                  'kokomu',
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: Theme.of(context).colorScheme.primary,

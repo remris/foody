@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/scanner/data/scanner_repository_impl.dart';
-import 'package:kokomi/features/scanner/domain/scanner_repository.dart';
-import 'package:kokomi/models/inventory_item.dart';
+import 'package:kokomu/features/scanner/data/scanner_repository_impl.dart';
+import 'package:kokomu/features/scanner/domain/scanner_repository.dart';
+import 'package:kokomu/models/inventory_item.dart';
 
 final scannerRepositoryProvider = Provider<ScannerRepository>((ref) {
   return ScannerRepositoryImpl();

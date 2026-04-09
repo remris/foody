@@ -46,7 +46,7 @@ class WelcomeAfterRegistrationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Dein Kokomi-Konto wurde erfolgreich erstellt.\n'
+                'Dein kokomu-Konto wurde erfolgreich erstellt.\n'
                 'Bitte bestätige noch deine E-Mail, damit du alle Funktionen nutzen kannst.',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,

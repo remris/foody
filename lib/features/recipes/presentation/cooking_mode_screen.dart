@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:kokomi/features/recipes/presentation/cooked_recipes_provider.dart';
-import 'package:kokomi/features/recipes/presentation/cooking_streak_provider.dart';
-import 'package:kokomi/features/nutrition/presentation/nutrition_provider.dart';
-import 'package:kokomi/features/inventory/presentation/inventory_provider.dart';
-import 'package:kokomi/models/recipe.dart';
+import 'package:kokomu/features/recipes/presentation/cooked_recipes_provider.dart';
+import 'package:kokomu/features/recipes/presentation/cooking_streak_provider.dart';
+import 'package:kokomu/features/nutrition/presentation/nutrition_provider.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/models/recipe.dart';
 
 /// Vollbild Schritt-für-Schritt Kochmodus.
 /// Bildschirm bleibt an, Wisch-Navigation zwischen Schritten.

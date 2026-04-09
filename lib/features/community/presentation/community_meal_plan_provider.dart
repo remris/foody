@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/community/data/community_meal_plan_repository.dart';
-import 'package:kokomi/features/meal_plan/presentation/meal_plan_provider.dart';
-import 'package:kokomi/models/community_meal_plan.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/community/data/community_meal_plan_repository.dart';
+import 'package:kokomu/features/meal_plan/presentation/meal_plan_provider.dart';
+import 'package:kokomu/models/community_meal_plan.dart';
 
 final communityMealPlanRepositoryProvider =
     Provider<CommunityMealPlanRepository>((ref) => CommunityMealPlanRepository());

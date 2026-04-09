@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:kokomi/core/services/notification_service.dart';
-import 'package:kokomi/core/services/profanity_filter.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/features/auth/presentation/auth_provider.dart';
-import 'package:kokomi/features/household/presentation/household_provider.dart';
-import 'package:kokomi/models/household.dart';
+import 'package:kokomu/core/services/notification_service.dart';
+import 'package:kokomu/core/services/profanity_filter.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/household/presentation/household_provider.dart';
+import 'package:kokomu/models/household.dart';
 
 // ── Modell ────────────────────────────────────────────────────────────────
 

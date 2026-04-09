@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:kokomi/features/profile/presentation/profile_provider.dart';
-import 'package:kokomi/features/profile/presentation/profile_recipe_page_view.dart';
-import 'package:kokomi/features/profile/presentation/followers_screen.dart';
-import 'package:kokomi/features/community/presentation/community_recipe_detail_screen.dart';
-import 'package:kokomi/features/community/presentation/community_meal_plan_detail_screen.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/models/user_profile.dart';
-import 'package:kokomi/models/community_recipe.dart';
-import 'package:kokomi/features/profile/presentation/following_feed_screen.dart' show PostFeedCard;
+import 'package:kokomu/features/profile/presentation/profile_provider.dart';
+import 'package:kokomu/features/profile/presentation/profile_recipe_page_view.dart';
+import 'package:kokomu/features/profile/presentation/followers_screen.dart';
+import 'package:kokomu/features/community/presentation/community_recipe_detail_screen.dart';
+import 'package:kokomu/features/community/presentation/community_meal_plan_detail_screen.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/models/user_profile.dart';
+import 'package:kokomu/models/community_recipe.dart';
+import 'package:kokomu/features/profile/presentation/following_feed_screen.dart' show PostFeedCard;
 
 class PublicProfileScreen extends ConsumerStatefulWidget {
   final String userId;
@@ -106,7 +106,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                                 Text(
                                   profile.displayName.isNotEmpty
                                       ? profile.displayName
-                                      : 'Kokomi-User',
+                                      : 'kokomu-User',
                                   style: theme.textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),

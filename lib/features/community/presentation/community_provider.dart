@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/core/services/profanity_filter.dart';
-import 'package:kokomi/features/community/data/community_recipe_repository.dart';
-import 'package:kokomi/features/settings/presentation/subscription_provider.dart';
-import 'package:kokomi/models/community_recipe.dart';
+import 'package:kokomu/core/services/profanity_filter.dart';
+import 'package:kokomu/features/community/data/community_recipe_repository.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/models/community_recipe.dart';
 
 // ─── Repository Provider ─────────────────────────────────────────────────
 

@@ -6,13 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:kokomi/core/constants/app_theme.dart';
-import 'package:kokomi/core/router/app_router.dart';
-import 'package:kokomi/core/services/notification_service.dart';
-import 'package:kokomi/core/services/push_notification_service.dart';
-import 'package:kokomi/core/services/theme_provider.dart';
-import 'package:kokomi/core/services/locale_provider.dart';
-import 'package:kokomi/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:kokomu/core/constants/app_theme.dart';
+import 'package:kokomu/core/router/app_router.dart';
+import 'package:kokomu/core/services/notification_service.dart';
+import 'package:kokomu/core/services/push_notification_service.dart';
+import 'package:kokomu/core/services/theme_provider.dart';
+import 'package:kokomu/core/services/locale_provider.dart';
+import 'package:kokomu/features/onboarding/presentation/onboarding_screen.dart';
 
 /// Ob der Onboarding-Flow schon abgeschlossen wurde.
 final onboardingCompleteProvider = StateProvider<bool>((ref) => true);
@@ -27,6 +27,9 @@ Future<void> main() async {
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
   );
 
   // Lokale Notifications initialisieren
@@ -64,12 +67,12 @@ void _runApp(bool onboardingDone) {
     overrides: [
       onboardingCompleteProvider.overrideWith((ref) => onboardingDone),
     ],
-    child: const KokomiApp(),
+    child: const kokomuApp(),
   ));
 }
 
-class KokomiApp extends ConsumerWidget {
-  const KokomiApp({super.key});
+class kokomuApp extends ConsumerWidget {
+  const kokomuApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -79,7 +82,7 @@ class KokomiApp extends ConsumerWidget {
     final activeLocale = ref.watch(activeLocaleProvider);
 
     return MaterialApp.router(
-      title: 'Kokomi',
+      title: 'kokomu',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(colorScheme),
       darkTheme: AppTheme.dark(colorScheme),

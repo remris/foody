@@ -1,5 +1,5 @@
-import 'package:kokomi/core/services/supabase_service.dart';
-import 'package:kokomi/models/community_meal_plan.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
+import 'package:kokomu/models/community_meal_plan.dart';
 
 class CommunityMealPlanRepository {
   static const _table = 'community_meal_plans';
@@ -12,7 +12,7 @@ class CommunityMealPlanRepository {
 
   String? get currentUserId => _client.auth.currentUser?.id;
   String get currentAuthorName =>
-      _client.auth.currentUser?.email?.split('@').first ?? 'Kokomi-User';
+      _client.auth.currentUser?.email?.split('@').first ?? 'kokomu-User';
 
   // ─── Feed ────────────────────────────────────────────────────────────────
 

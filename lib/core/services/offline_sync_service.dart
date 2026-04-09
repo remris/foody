@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/core/database/local_database.dart';
-import 'package:kokomi/core/services/connectivity_service.dart';
-import 'package:kokomi/core/services/supabase_service.dart';
+import 'package:kokomu/core/database/local_database.dart';
+import 'package:kokomu/core/services/connectivity_service.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
 import 'package:drift/drift.dart';
 
 /// Synchronisiert ausstehende lokale Änderungen mit Supabase.

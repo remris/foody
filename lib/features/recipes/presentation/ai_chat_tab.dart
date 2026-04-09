@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kokomi/features/recipes/presentation/ai_chat_provider.dart';
+import 'package:kokomu/features/recipes/presentation/ai_chat_provider.dart';
 
 class AiChatTab extends ConsumerStatefulWidget {
   const AiChatTab({super.key});
