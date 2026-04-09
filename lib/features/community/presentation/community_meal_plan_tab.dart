@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kokomu/core/services/supabase_service.dart';
 import 'package:kokomu/features/community/presentation/community_meal_plan_provider.dart';
 import 'package:kokomu/features/community/presentation/community_meal_plan_detail_screen.dart';
 import 'package:kokomu/models/community_meal_plan.dart';
@@ -20,6 +21,10 @@ class _CommunityMealPlanTabState extends ConsumerState<CommunityMealPlanTab> {
   final _searchController = TextEditingController();
   String? _activeTag;
   bool _showSearch = false;
+  // User-Suche (@username)
+  bool _isUserSearch = false;
+  List<Map<String, dynamic>> _userResults = [];
+  bool _isSearchingUsers = false;
 
   static const _filterTags = [
     'Vegetarisch', 'Vegan', 'Low Carb', 'High Protein',
@@ -46,6 +51,33 @@ class _CommunityMealPlanTabState extends ConsumerState<CommunityMealPlanTab> {
     }
   }
 
+  Future<void> _onSearchChanged(String val) async {
+    if (val.startsWith('@')) {
+      setState(() => _isUserSearch = true);
+      final q = val.substring(1).trim();
+      if (q.length < 2) {
+        setState(() { _userResults = []; _isSearchingUsers = false; });
+        return;
+      }
+      setState(() => _isSearchingUsers = true);
+      try {
+        final res = await SupabaseService.client
+            .from('social_profiles')
+            .select('id, display_name, avatar_url, bio')
+            .ilike('display_name', '%$q%')
+            .limit(20);
+        if (mounted) setState(() { _userResults = List<Map<String, dynamic>>.from(res as List); });
+      } catch (_) {
+        if (mounted) setState(() => _userResults = []);
+      } finally {
+        if (mounted) setState(() => _isSearchingUsers = false);
+      }
+    } else {
+      setState(() { _isUserSearch = false; _userResults = []; });
+      _applyFilter(tag: _activeTag);
+    }
+  }
+
   void _applyFilter({String? tag}) {
     setState(() => _activeTag = tag);
     ref.read(communityMealPlanFeedProvider.notifier).setFilter(
@@ -67,28 +99,124 @@ class _CommunityMealPlanTabState extends ConsumerState<CommunityMealPlanTab> {
         if (_showSearch)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: TextField(
-              controller: _searchController,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Wochenpläne suchen...',
-                isDense: true,
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      _showSearch = false;
-                      _searchController.clear();
-                    });
-                    _applyFilter(tag: _activeTag);
-                  },
+            child: RawAutocomplete<Map<String, dynamic>>(
+              textEditingController: _searchController,
+              focusNode: FocusNode(),
+              optionsBuilder: (tv) async {
+                final val = tv.text;
+                if (!val.startsWith('@') || val.length < 2) return [];
+                final q = val.substring(1).trim();
+                if (q.isEmpty) return [];
+                try {
+                  final res = await SupabaseService.client
+                      .from('social_profiles')
+                      .select('id, display_name, avatar_url, bio')
+                      .ilike('display_name', '%$q%')
+                      .limit(8);
+                  return List<Map<String, dynamic>>.from(res as List);
+                } catch (_) {
+                  return [];
+                }
+              },
+              displayStringForOption: (u) => '@${u['display_name']}',
+              onSelected: (u) {
+                final uid = u['id'] as String?;
+                if (uid != null) context.push('/profile/$uid');
+              },
+              fieldViewBuilder: (ctx, ctrl, focus, onSubmit) => TextField(
+                controller: ctrl,
+                focusNode: focus,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Wochenpläne suchen oder @username...',
+                  isDense: true,
+                  prefixIcon: Icon(_isUserSearch ? Icons.person_search : Icons.search, size: 20),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      setState(() {
+                        _showSearch = false;
+                        _isUserSearch = false;
+                        _userResults = [];
+                        _searchController.clear();
+                      });
+                      _applyFilter(tag: _activeTag);
+                    },
+                  ),
                 ),
+                onChanged: _onSearchChanged,
+                onSubmitted: (_) { if (!_isUserSearch) _applyFilter(tag: _activeTag); },
               ),
-              onSubmitted: (_) => _applyFilter(tag: _activeTag),
+              optionsViewBuilder: (ctx, onSel, opts) {
+                final t = Theme.of(ctx);
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(12),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 280, maxWidth: 360),
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        shrinkWrap: true,
+                        children: opts.map((u) {
+                          final name = u['display_name'] as String? ?? '';
+                          final avatar = u['avatar_url'] as String?;
+                          final bio = u['bio'] as String?;
+                          return ListTile(
+                            dense: true,
+                            leading: CircleAvatar(
+                              radius: 18,
+                              backgroundImage: avatar != null ? NetworkImage(avatar) : null,
+                              child: avatar == null
+                                  ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                      style: t.textTheme.bodySmall)
+                                  : null,
+                            ),
+                            title: Text('@$name',
+                                style: t.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                            subtitle: bio != null && bio.isNotEmpty
+                                ? Text(bio, maxLines: 1, overflow: TextOverflow.ellipsis) : null,
+                            onTap: () => onSel(u),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
 
+        // User-Suchergebnisse (manuell eingetippt ohne Auswahl)
+        if (_isUserSearch && _userResults.isNotEmpty) ...[
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              itemCount: _userResults.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, i) {
+                final u = _userResults[i];
+                final name = u['display_name'] as String? ?? 'Unbekannt';
+                final avatar = u['avatar_url'] as String?;
+                final bio = u['bio'] as String?;
+                final uid = u['id'] as String?;
+                return ListTile(
+                  leading: CircleAvatar(
+                    radius: 22,
+                    backgroundImage: avatar != null ? NetworkImage(avatar) : null,
+                    child: avatar == null ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?') : null,
+                  ),
+                    title: Text(name, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    subtitle: bio != null && bio.isNotEmpty
+                        ? Text(bio, maxLines: 1, overflow: TextOverflow.ellipsis) : null,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: uid != null ? () => context.push('/profile/$uid') : null,
+                  );
+                },
+              ),
+            ),
+        ] else ...[
         // Filter-Chips
         SizedBox(
           height: 44,
@@ -201,6 +329,7 @@ class _CommunityMealPlanTabState extends ConsumerState<CommunityMealPlanTab> {
             },
           ),
         ),
+        ], // Ende else (kein User-Suche)
       ],
     );
   }

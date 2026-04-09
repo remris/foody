@@ -4,6 +4,8 @@ import 'package:kokomu/features/community/presentation/community_meal_plan_provi
 import 'package:kokomu/features/community/presentation/publish_meal_plan_sheet.dart';
 import 'package:kokomu/features/meal_plan/presentation/meal_plan_provider.dart';
 import 'package:kokomu/features/meal_plan/presentation/new_meal_plan_screen.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/features/settings/presentation/paywall_screen.dart';
 import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
 import 'package:kokomu/features/profile/presentation/profile_provider.dart';
 import 'package:kokomu/models/shopping_list.dart';
@@ -54,6 +56,8 @@ class _CommunityMealPlanDetailScreenState
   }
 
   Future<void> _toggleSave() async {
+    final isPro = ref.read(subscriptionProvider).valueOrNull?.isPro ?? false;
+    if (!isPro) return; // silently disabled – Icon ist ausgegraut
     await ref.read(communityMealPlanFeedProvider.notifier).toggleSave(_plan);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -65,11 +69,13 @@ class _CommunityMealPlanDetailScreenState
   }
 
   Future<void> _rate(int stars) async {
+    final isPro = ref.read(subscriptionProvider).valueOrNull?.isPro ?? false;
+    if (!isPro) return; // silently disabled
     setState(() => _myRating = stars);
     await ref.read(communityMealPlanFeedProvider.notifier).ratePlan(_plan, stars);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('🥄 Danke für deine Bewertung!'),
+        content: const Text('🥄 Danke für deine Bewertung!'),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ));
@@ -192,6 +198,28 @@ class _CommunityMealPlanDetailScreenState
       };
 
   Future<void> _importPlan() async {
+    final isPro = ref.read(subscriptionProvider).valueOrNull?.isPro ?? false;
+    if (!isPro) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('⭐ Plan übernehmen ist nur mit Pro verfügbar'),
+          action: SnackBarAction(
+            label: 'Pro holen',
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                builder: (_) => const PaywallScreen(),
+              );
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
     final entries = _plan.entries;
     if (entries.isEmpty) return;
 
@@ -377,6 +405,7 @@ class _CommunityMealPlanDetailScreenState
     final theme = Theme.of(context);
     final entries = _plan.entries;
     const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    final isPro = ref.watch(subscriptionProvider).valueOrNull?.isPro ?? false;
 
     final daysWithEntries = entries.map((e) => e.dayIndex).toSet().toList()..sort();
     final dayEntries = entries.where((e) => e.dayIndex == _selectedDay).toList()
@@ -444,16 +473,22 @@ class _CommunityMealPlanDetailScreenState
               ],
             ),
           ] else ...[
-            // Fremder Plan: Speichern + Like
-            IconButton(
-              icon: Icon(
-                livePlan.isSavedByMe
-                    ? Icons.bookmark_rounded
-                    : Icons.bookmark_border_rounded,
-                color: livePlan.isSavedByMe ? theme.colorScheme.primary : null,
+            // Fremder Plan: Speichern + Like – nur Pro
+            Tooltip(
+              message: isPro ? (livePlan.isSavedByMe ? 'Gespeichert' : 'Speichern') : '⭐ Pro',
+              child: IconButton(
+                icon: Icon(
+                  livePlan.isSavedByMe
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_border_rounded,
+                  color: !isPro
+                      ? theme.disabledColor
+                      : livePlan.isSavedByMe
+                          ? theme.colorScheme.primary
+                          : null,
+                ),
+                onPressed: isPro ? _toggleSave : null,
               ),
-              tooltip: livePlan.isSavedByMe ? 'Gespeichert' : 'Speichern',
-              onPressed: _toggleSave,
             ),
             IconButton(
               icon: Icon(
@@ -568,16 +603,18 @@ class _CommunityMealPlanDetailScreenState
                           const SizedBox(width: 8),
                           CookingSpoonRating(
                             myRating: _myRating > 0 ? _myRating : null,
-                            onRate: _rate,
+                            onRate: isPro ? _rate : null,
                             size: 22,
                             showCount: false,
                           ),
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              _myRating > 0
-                                  ? _ratingLabel(_myRating)
-                                  : 'Tippe zum Bewerten',
+                              !isPro
+                                  ? '⭐ Nur mit Pro'
+                                  : _myRating > 0
+                                      ? _ratingLabel(_myRating)
+                                      : 'Tippe zum Bewerten',
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: _myRating > 0
@@ -663,24 +700,37 @@ class _CommunityMealPlanDetailScreenState
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _addToShoppingList,
-                  icon: const Icon(Icons.shopping_cart_outlined),
-                  label: const Text('Einkaufsliste'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: _importPlan,
-                  icon: const Icon(Icons.calendar_month_rounded),
-                  label: const Text('Plan übernehmen'),
-                ),
-              ),
-            ],
+          child: Builder(
+            builder: (ctx) {
+              final isPro = ref.watch(subscriptionProvider).valueOrNull?.isPro ?? false;
+              return Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _addToShoppingList,
+                      icon: const Icon(Icons.shopping_cart_outlined),
+                      label: const Text('Einkaufsliste'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Tooltip(
+                      message: isPro ? '' : '⭐ Nur mit Pro verfügbar',
+                      child: FilledButton.icon(
+                        onPressed: _importPlan,
+                        icon: Icon(Icons.calendar_month_rounded,
+                            color: isPro ? null : Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.38)),
+                        label: Text('Plan übernehmen',
+                            style: isPro ? null : TextStyle(
+                                color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.38))),
+                        style: isPro ? null : FilledButton.styleFrom(
+                            backgroundColor: Theme.of(ctx).colorScheme.surfaceContainerHighest),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

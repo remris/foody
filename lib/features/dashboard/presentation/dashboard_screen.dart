@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:kokomu/core/utils/extensions.dart';
 import 'package:kokomu/features/auth/presentation/auth_provider.dart';
 import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/features/inventory/presentation/item_detail_screen.dart';
 import 'package:kokomu/features/nutrition/presentation/nutrition_provider.dart';
 import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
 import 'package:kokomu/features/recipes/presentation/cooking_streak_provider.dart';
@@ -451,7 +452,9 @@ class _InventoryOverviewCard extends ConsumerWidget {
               }
               final expired = items.where((i) => i.expiryDate != null && i.expiryDate!.isExpired).length;
               final soon = items.where((i) => i.expiryDate != null && !i.expiryDate!.isExpired && i.expiryDate!.isExpiringSoon).length;
+              final opened = items.where((i) => i.isOpened).toList();
               final ok = items.length - expired - soon;
+              const maxVisible = 4;
 
               return Column(
                 children: [
@@ -461,11 +464,83 @@ class _InventoryOverviewCard extends ConsumerWidget {
                       const SizedBox(width: 8),
                       _MiniStat(value: '$ok', label: 'Gut', color: Colors.green),
                       const SizedBox(width: 8),
+                      if (opened.isNotEmpty) _MiniStat(value: '${opened.length}', label: 'Geöffnet', color: Colors.orange),
+                      if (opened.isNotEmpty) const SizedBox(width: 8),
                       if (soon > 0) _MiniStat(value: '$soon', label: 'Bald ab', color: Colors.orange),
                       if (soon > 0) const SizedBox(width: 8),
                       if (expired > 0) _MiniStat(value: '$expired', label: 'Abgelaufen', color: theme.colorScheme.error),
                     ],
                   ),
+                  // Geöffnete Items Vorschau – max 4, jedes tippbar
+                  if (opened.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.lock_open_rounded, size: 13, color: Colors.orange),
+                              const SizedBox(width: 5),
+                              Text('Geöffnet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.orange.shade800)),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          ...opened.take(maxVisible).map((i) {
+                            final days = DateTime.now().difference(i.openedAt!).inDays;
+                            return InkWell(
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ItemDetailScreen(item: i),
+                                ),
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 3),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        i.ingredientName,
+                                        style: const TextStyle(fontSize: 12),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Text(
+                                      'seit ${days}T',
+                                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(Icons.chevron_right_rounded, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                          if (opened.length > maxVisible) ...[
+                            const SizedBox(height: 4),
+                            GestureDetector(
+                              onTap: () => context.go('/inventory'),
+                              child: Text(
+                                '+${opened.length - maxVisible} weitere anzeigen →',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                   if (expired > 0 || soon > 0) ...[
                     const SizedBox(height: 10),
                     Container(
@@ -1021,7 +1096,7 @@ class _HouseholdCard extends ConsumerWidget {
         if (household == null) {
           // Kein Haushalt – Einladung zum Erstellen/Beitreten
           return _DashCard(
-            onTap: () => context.go('/household'),
+            onTap: () => context.go('/settings/household'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1044,7 +1119,7 @@ class _HouseholdCard extends ConsumerWidget {
         final activityAsync = ref.watch(householdActivityProvider);
 
         return _DashCard(
-          onTap: () => context.go('/household'),
+          onTap: () => context.go('/settings/household'),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1167,31 +1242,54 @@ class _ShoppingListsCard extends ConsumerWidget {
                   theme: theme,
                 );
               }
+              const maxVisible = 4;
               return Column(
-                children: lists.take(3).map((list) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      children: [
-                        Icon(_iconForList(list.icon), size: 16, color: theme.colorScheme.primary),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            list.name,
-                            style: theme.textTheme.bodyMedium,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ...lists.take(maxVisible).map((list) {
+                    return InkWell(
+                      onTap: () => context.go('/shopping'),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        child: Row(
+                          children: [
+                            Icon(_iconForList(list.icon), size: 16, color: theme.colorScheme.primary),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                list.name,
+                                style: theme.textTheme.bodyMedium,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (list.householdId != null)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Icon(Icons.people_alt_outlined, size: 14, color: theme.colorScheme.primary),
+                              ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.chevron_right_rounded, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                          ],
                         ),
-                        if (list.householdId != null)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4),
-                            child: Icon(Icons.people_alt_outlined, size: 14, color: theme.colorScheme.primary),
-                          ),
-                        const Icon(Icons.chevron_right_rounded, size: 16),
-                      ],
+                      ),
+                    );
+                  }),
+                  if (lists.length > maxVisible) ...[
+                    const SizedBox(height: 4),
+                    GestureDetector(
+                      onTap: () => context.go('/shopping'),
+                      child: Text(
+                        '+${lists.length - maxVisible} weitere Listen →',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                  );
-                }).toList(),
+                  ],
+                ],
               );
             },
           ),
@@ -1221,7 +1319,7 @@ class _QuickActionsRow extends StatelessWidget {
     final theme = Theme.of(context);
 
     final actions = [
-      (Icons.people_alt_rounded, 'Haushalt', Colors.indigo, () => context.go('/household')),
+      (Icons.people_alt_rounded, 'Haushalt', Colors.indigo, () => context.go('/settings/household')),
       (Icons.calendar_month_outlined, 'Wochenplan', theme.colorScheme.secondary, () => context.push('/kitchen/meal-plan')),
       (Icons.explore_outlined, 'Entdecken', Colors.orange, () => context.go('/discover')),
       (Icons.shopping_cart_rounded, 'Einkauf', Colors.teal, () => context.go('/shopping')),

@@ -1990,6 +1990,26 @@ class _MyPlanDetailSheetState extends ConsumerState<_MyPlanDetailSheet> {
     if (mounted) Navigator.pop(context);
   }
 
+  void _showProHint(BuildContext ctx) {
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(
+        content: const Text('⭐ Diese Funktion ist nur mit Pro verfügbar'),
+        action: SnackBarAction(
+          label: 'Pro holen',
+          onPressed: () {
+            ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
+            showModalBottomSheet(
+              context: ctx,
+              isScrollControlled: true,
+              useSafeArea: true,
+              builder: (_) => const PaywallScreen(),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _editPlan() async {
     Navigator.pop(context);
     final result = await Navigator.push<bool>(
@@ -2060,6 +2080,7 @@ class _MyPlanDetailSheetState extends ConsumerState<_MyPlanDetailSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isPublished = _plan.isPublished;
+    final isPro = ref.watch(subscriptionProvider).valueOrNull?.isPro ?? false;
     final entries = _plan.entries;
     final uniqueRecipes = entries.map((e) => e.recipe.title).toSet().length;
     const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -2246,21 +2267,38 @@ class _MyPlanDetailSheetState extends ConsumerState<_MyPlanDetailSheet> {
                       minimumSize: const Size(double.infinity, 44)),
                 ),
                 const SizedBox(height: 8),
-                FilledButton.icon(
-                  onPressed: _loadPlan,
-                  icon: const Icon(Icons.download_rounded, size: 18),
-                  label: const Text('In aktuellen Plan laden'),
+                // Plan übernehmen – nur Pro
+                Tooltip(
+                  message: isPro ? '' : '⭐ Nur mit Pro verfügbar',
+                  child: FilledButton.icon(
+                    onPressed: isPro ? _loadPlan : () => _showProHint(context),
+                    icon: Icon(Icons.download_rounded,
+                        size: 18,
+                        color: isPro ? null : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38)),
+                    label: Text('In aktuellen Plan laden',
+                        style: isPro ? null : TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38))),
+                    style: isPro ? null : FilledButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 if (!isPublished)
-                  OutlinedButton.icon(
-                    onPressed: _publish,
-                    icon: const Icon(Icons.cloud_upload_outlined,
-                        size: 18, color: Colors.green),
-                    label: const Text('In Community teilen',
-                        style: TextStyle(color: Colors.green)),
-                    style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.green.shade300)),
+                  // In Community teilen – nur Pro
+                  Tooltip(
+                    message: isPro ? '' : '⭐ Nur mit Pro verfügbar',
+                    child: OutlinedButton.icon(
+                      onPressed: isPro ? _publish : () => _showProHint(context),
+                      icon: Icon(Icons.cloud_upload_outlined,
+                          size: 18,
+                          color: isPro ? Colors.green : Theme.of(context).disabledColor),
+                      label: Text('In Community teilen',
+                          style: TextStyle(
+                              color: isPro ? Colors.green : Theme.of(context).disabledColor)),
+                      style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                              color: isPro ? Colors.green.shade300 : Theme.of(context).disabledColor)),
+                    ),
                   )
                 else
                   OutlinedButton.icon(
@@ -2317,10 +2355,31 @@ class _SavedCommunityTab extends ConsumerWidget {
   final Future<void> Function(List<MealPlanEntry> entries, String name) onLoad;
   const _SavedCommunityTab({required this.onLoad});
 
+  void _showProHint(BuildContext ctx) {
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(
+        content: const Text('⭐ Diese Funktion ist nur mit Pro verfügbar'),
+        action: SnackBarAction(
+          label: 'Pro holen',
+          onPressed: () {
+            ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
+            showModalBottomSheet(
+              context: ctx,
+              isScrollControlled: true,
+              useSafeArea: true,
+              builder: (_) => const PaywallScreen(),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final savedAsync = ref.watch(savedMealPlansProvider);
+    final isPro = ref.watch(subscriptionProvider).valueOrNull?.isPro ?? false;
 
     return savedAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -2432,6 +2491,10 @@ class _SavedCommunityTab extends ConsumerWidget {
                         icon: const Icon(Icons.more_vert_rounded),
                         onSelected: (action) {
                           if (action == 'load') {
+                            if (!isPro) {
+                              _showProHint(ctx);
+                              return;
+                            }
                             Navigator.pop(ctx);
                             onLoad(entries, plan.title);
                           } else if (action == 'detail') {
@@ -2446,13 +2509,17 @@ class _SavedCommunityTab extends ConsumerWidget {
                           }
                         },
                         itemBuilder: (_) => [
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'load',
                             child: ListTile(
                               dense: true,
                               contentPadding: EdgeInsets.zero,
-                              leading: Icon(Icons.download_rounded),
-                              title: Text('In Plan laden'),
+                              leading: Icon(Icons.download_rounded,
+                                  color: isPro ? null : Theme.of(context).disabledColor),
+                              title: Text('In Plan laden',
+                                  style: TextStyle(
+                                      color: isPro ? null : Theme.of(context).disabledColor)),
+                              trailing: isPro ? null : const Icon(Icons.lock_outline, size: 14),
                             ),
                           ),
                           const PopupMenuItem(

@@ -8,6 +8,14 @@ import 'package:kokomu/features/household/presentation/household_provider.dart';
 import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
 import 'package:kokomu/models/inventory_item.dart';
 
+const _kInventoryUnits = [
+  'g', 'kg', 'ml', 'L', 'cl',
+  'EL', 'TL', 'Tasse',
+  'Stück', 'Packung', 'Pkg.', 'Dose', 'Glas',
+  'Scheibe', 'Scheiben', 'Bund',
+  'Prise', 'Schuss', 'nach Geschmack',
+];
+
 class AddInventoryItemSheet extends ConsumerStatefulWidget {
   final InventoryItem? existingItem;
   const AddInventoryItemSheet({super.key, this.existingItem});
@@ -22,8 +30,8 @@ class _AddInventoryItemSheetState
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _quantityController;
-  late final TextEditingController _unitController;
   late final TextEditingController _thresholdController;
+  String _selectedUnit = 'g';
   FoodCategory? _selectedCategory;
   DateTime? _expiryDate;
   bool _isLoading = false;
@@ -37,7 +45,8 @@ class _AddInventoryItemSheetState
     _nameController = TextEditingController(text: item?.ingredientName ?? '');
     _quantityController =
         TextEditingController(text: item?.quantity?.toString() ?? '');
-    _unitController = TextEditingController(text: item?.unit ?? '');
+    final existingUnit = item?.unit ?? 'g';
+    _selectedUnit = _kInventoryUnits.contains(existingUnit) ? existingUnit : _kInventoryUnits.first;
     _thresholdController = TextEditingController(
         text: item != null && item.minThreshold > 0
             ? item.minThreshold.toString()
@@ -64,7 +73,6 @@ class _AddInventoryItemSheetState
   void dispose() {
     _nameController.dispose();
     _quantityController.dispose();
-    _unitController.dispose();
     _thresholdController.dispose();
     super.dispose();
   }
@@ -129,7 +137,7 @@ class _AddInventoryItemSheetState
       ingredientName: _nameController.text.trim(),
       ingredientCategory: _selectedCategory?.label,
       quantity: double.tryParse(_quantityController.text),
-      unit: _unitController.text.trim().isEmpty ? null : _unitController.text.trim(),
+      unit: _selectedUnit == 'nach Geschmack' ? null : _selectedUnit,
       expiryDate: _expiryDate,
       minThreshold: double.tryParse(_thresholdController.text) ?? 0,
       barcode: widget.existingItem?.barcode,
@@ -204,8 +212,9 @@ class _AddInventoryItemSheetState
                   setState(() {
                     final cat = FoodCategory.fromLabel(entry.category);
                     if (cat != null) _selectedCategory = cat;
-                    if (_unitController.text.isEmpty && entry.defaultUnit != null) {
-                      _unitController.text = entry.defaultUnit!;
+                    if (entry.defaultUnit != null) {
+                      final u = entry.defaultUnit!;
+                      _selectedUnit = _kInventoryUnits.contains(u) ? u : _kInventoryUnits.first;
                     }
                   });
                 },
@@ -225,12 +234,9 @@ class _AddInventoryItemSheetState
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: TextFormField(
-                      controller: _unitController,
-                      decoration: const InputDecoration(
-                        labelText: 'Einheit',
-                        hintText: 'g, ml, Stück...',
-                      ),
+                    child: _UnitDropdown(
+                      value: _selectedUnit,
+                      onChanged: (u) => setState(() => _selectedUnit = u),
                     ),
                   ),
                 ],
@@ -394,3 +400,40 @@ class _IngredientAutocomplete extends StatelessWidget {
     );
   }
 }
+
+// ── Einheit-Dropdown ──────────────────────────────────────────────────────────
+
+class _UnitDropdown extends StatelessWidget {
+  final String value;
+  final ValueChanged<String> onChanged;
+  const _UnitDropdown({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final units = _kInventoryUnits.contains(value)
+        ? _kInventoryUnits
+        : [value, ..._kInventoryUnits];
+    return DropdownButtonFormField<String>(
+      value: value,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Einheit',
+        prefixIcon: Icon(Icons.straighten, size: 18),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      ),
+      items: units
+          .map((u) => DropdownMenuItem(
+                value: u,
+                child: Text(u,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium),
+              ))
+          .toList(),
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
+    );
+  }
+}
+

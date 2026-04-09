@@ -39,9 +39,16 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
   final _timeController = TextEditingController(text: '30');
   final _servingsController = TextEditingController(text: '2');
   String _difficulty = 'Einfach';
+  String? _category;
   final _ingredients = <_IngredientEntry>[];
   final _steps = <TextEditingController>[];
   final _tags = <String>[];
+  final _tagCtrl = TextEditingController();
+  final _tagFocus = FocusNode();
+
+  static const _kCategories = [
+    'Frühstück', 'Mittagessen', 'Abendessen', 'Snack',
+  ];
 
   // Bild
   String? _imageUrl;
@@ -73,6 +80,8 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
     for (final s in _steps) {
       s.dispose();
     }
+    _tagCtrl.dispose();
+    _tagFocus.dispose();
     super.dispose();
   }
 
@@ -236,6 +245,7 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
       ingredients: ingredients,
       steps: steps,
       tags: List.from(_tags),
+      category: _category,
       imageUrl: _imageUrl,
     );
 
@@ -390,8 +400,7 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
               onChanged: (v) => setState(() => _difficulty = v ?? 'Einfach'),
             ),
             const SizedBox(height: 24),
-
-            // â”€â”€ Zutaten â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Zutaten ───────────────────────────────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -502,78 +511,141 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
             }),
             const SizedBox(height: 24),
 
-            // ── Tags ──────────────────────────────────────────────────────
+            // ── Kategorie (horizontaler Slider) ───────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Tags',
+                Text('Kategorie',
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold)),
-                Row(
-                  children: [
-                    Text('optional',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: theme.colorScheme.outline)),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final selected = await showModalBottomSheet<List<String>>(
-                          context: context,
-                          isScrollControlled: true,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(24)),
-                          ),
-                          builder: (_) => _TagPickerSheet(
-                            selected: List.from(_tags),
-                            suggestions: _kSuggestedTags,
-                          ),
-                        );
-                        if (selected != null) {
-                          setState(() {
-                            _tags
-                              ..clear()
-                              ..addAll(selected);
-                          });
-                        }
-                      },
-                      icon: const Icon(Icons.add_rounded, size: 16),
-                      label: const Text('Tags wählen'),
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                      ),
-                    ),
-                  ],
-                ),
+                Text('optional',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.outline)),
               ],
             ),
             const SizedBox(height: 8),
-            if (_tags.isNotEmpty) ...[
-              // Hinzugefügte Tags
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: _tags
-                    .map((t) => Chip(
-                          label: Text(t,
-                              style: const TextStyle(fontSize: 12)),
-                          deleteIcon:
-                              const Icon(Icons.close, size: 14),
-                          visualDensity: VisualDensity.compact,
-                          onDeleted: () =>
-                              setState(() => _tags.remove(t)),
-                        ))
-                    .toList(),
+            SizedBox(
+              height: 36,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: _kCategories.map((cat) {
+                  final sel = _category == cat;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(cat, style: const TextStyle(fontSize: 12)),
+                      selected: sel,
+                      onSelected: (_) => setState(() => _category = sel ? null : cat),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  );
+                }).toList(),
               ),
-            ] else
-              Text(
-                'Noch keine Tags – tippe auf „Tags wählen"',
-                style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.outline),
-              ),
+            ),
+            const SizedBox(height: 24),
 
+            // ── Tags (RawAutocomplete + horizontale Chip-Zeile) ───────────
+            Text('Tags',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            RawAutocomplete<String>(
+              textEditingController: _tagCtrl,
+              focusNode: _tagFocus,
+              optionsBuilder: (tv) {
+                final q = tv.text.toLowerCase();
+                if (q.isEmpty) {
+                  return _kSuggestedTags
+                      .where((t) => !_tags.contains(t))
+                      .take(8);
+                }
+                return _kSuggestedTags
+                    .where((t) =>
+                        !_tags.contains(t) &&
+                        t.toLowerCase().contains(q))
+                    .take(6);
+              },
+              onSelected: (t) {
+                setState(() => _tags.add(t));
+                _tagCtrl.clear();
+                _tagFocus.unfocus();
+              },
+              fieldViewBuilder: (ctx, ctrl, focus, onSubmit) => TextField(
+                controller: ctrl,
+                focusNode: focus,
+                style: theme.textTheme.bodySmall,
+                decoration: InputDecoration(
+                  hintText: 'Tag tippen oder auswählen…',
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceContainerLow,
+                  prefixIcon: const Icon(Icons.label_outline_rounded, size: 18),
+                  suffixIcon: const Icon(Icons.arrow_drop_down_rounded, size: 20),
+                ),
+                onSubmitted: (v) {
+                  final tag = v.trim();
+                  if (tag.isNotEmpty && !_tags.contains(tag)) {
+                    setState(() => _tags.add(tag));
+                  }
+                  _tagCtrl.clear();
+                },
+              ),
+              optionsViewBuilder: (ctx, onSel, opts) => Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(12),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      shrinkWrap: true,
+                      children: opts
+                          .map((t) => ListTile(
+                                dense: true,
+                                leading: Icon(Icons.add_rounded,
+                                    size: 16,
+                                    color: theme.colorScheme.primary),
+                                title: Text(t,
+                                    style: theme.textTheme.bodySmall),
+                                onTap: () => onSel(t),
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (_tags.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 32,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: _tags
+                      .map((t) => Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: InputChip(
+                              label: Text(t,
+                                  style: const TextStyle(fontSize: 11)),
+                              selected: true,
+                              onDeleted: () =>
+                                  setState(() => _tags.remove(t)),
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 2),
+                            ),
+                          ))
+                      .toList(),
+                ),
+              ),
+            ],
             const SizedBox(height: 80),
           ],
         ),

@@ -8,6 +8,8 @@ import 'package:kokomu/features/community/presentation/community_recipe_detail_s
 import 'package:kokomu/features/community/presentation/publish_recipe_sheet.dart';
 import 'package:kokomu/features/community/presentation/publish_meal_plan_sheet.dart';
 import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/features/settings/presentation/paywall_screen.dart';
 import 'package:kokomu/models/community_recipe.dart';
 import 'package:kokomu/core/services/supabase_service.dart';
 import 'package:kokomu/widgets/main_shell.dart' show AppBarMoreButton;
@@ -42,6 +44,29 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
   }
 
   Future<void> _openPublishSheet() async {
+    final isPro = ref.read(subscriptionProvider).valueOrNull?.isPro ?? false;
+
+    if (_tabIndex == 1 && !isPro) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('⭐ Plan teilen ist nur mit Pro verfügbar'),
+          action: SnackBarAction(
+            label: 'Pro holen',
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                builder: (_) => const PaywallScreen(),
+              );
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
     if (_tabIndex == 1) {
       await showModalBottomSheet<bool>(
         context: context, isScrollControlled: true, useSafeArea: true,
@@ -123,19 +148,16 @@ class _CommunityRecipeFeedTabState
   final _searchController = TextEditingController();
   String? _activeCategory;
   bool _showSearch = false;
-  // einmal cachen statt bei jedem Card-Build abzufragen
+  // User-Suche (@username)
+  bool _isUserSearch = false;
+  List<Map<String, dynamic>> _userResults = [];
+  bool _isSearchingUsers = false;
+
   final String _currentUserId =
       SupabaseService.client.auth.currentUser?.id ?? '';
 
   static const _categories = [
-    'Frühstück',
-    'Mittagessen',
-    'Abendessen',
-    'Snack',
-    'Dessert',
-    'Backen',
-    'Vegetarisch',
-    'Vegan',
+    'Frühstück', 'Mittagessen', 'Abendessen', 'Snack',
   ];
 
   @override
@@ -158,6 +180,34 @@ class _CommunityRecipeFeedTabState
     }
   }
 
+  Future<void> _onSearchChanged(String val) async {
+    if (val.startsWith('@')) {
+      setState(() => _isUserSearch = true);
+      final q = val.substring(1).trim();
+      if (q.length < 1) {
+        setState(() { _userResults = []; _isSearchingUsers = false; });
+        return;
+      }
+      setState(() => _isSearchingUsers = true);
+      try {
+        final res = await SupabaseService.client
+            .from('social_profiles')
+            .select('id, display_name, avatar_url, bio')
+            .ilike('display_name', '%$q%')
+            .limit(20);
+        if (mounted) setState(() {
+          _userResults = List<Map<String, dynamic>>.from(res as List);
+          _isSearchingUsers = false;
+        });
+      } catch (_) {
+        if (mounted) setState(() { _userResults = []; _isSearchingUsers = false; });
+      }
+    } else {
+      setState(() { _isUserSearch = false; _userResults = []; });
+      _applyFilter(category: _activeCategory);
+    }
+  }
+
   void _applyFilter({String? category}) {
     setState(() => _activeCategory = category);
     ref.read(communityFeedProvider.notifier).setFilter(
@@ -170,6 +220,7 @@ class _CommunityRecipeFeedTabState
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final feedAsync = ref.watch(communityFeedProvider);
 
     return Column(
@@ -177,27 +228,158 @@ class _CommunityRecipeFeedTabState
         if (_showSearch)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: TextField(
-              controller: _searchController,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Rezepte suchen...',
-                isDense: true,
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      _showSearch = false;
-                      _searchController.clear();
-                    });
-                    _applyFilter(category: _activeCategory);
-                  },
+            child: RawAutocomplete<Map<String, dynamic>>(
+              textEditingController: _searchController,
+              focusNode: FocusNode(),
+              optionsBuilder: (tv) async {
+                final val = tv.text;
+                if (!val.startsWith('@') || val.length < 2) return [];
+                final q = val.substring(1).trim();
+                if (q.isEmpty) return [];
+                try {
+                  final res = await SupabaseService.client
+                      .from('social_profiles')
+                      .select('id, display_name, avatar_url, bio')
+                      .ilike('display_name', '%$q%')
+                      .limit(8);
+                  return List<Map<String, dynamic>>.from(res as List);
+                } catch (_) {
+                  return [];
+                }
+              },
+              displayStringForOption: (u) => '@${u['display_name']}',
+              onSelected: (u) {
+                setState(() {
+                  _isUserSearch = true;
+                  _userResults = [u];
+                  _isSearchingUsers = false;
+                });
+                final uid = u['id'] as String?;
+                if (uid != null) context.push('/profile/$uid');
+              },
+              fieldViewBuilder: (ctx, ctrl, focus, onSubmit) => TextField(
+                controller: ctrl,
+                focusNode: focus,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Rezepte suchen oder @username...',
+                  isDense: true,
+                  prefixIcon: Icon(
+                    _isUserSearch ? Icons.person_search : Icons.search,
+                    size: 20,
+                  ),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      setState(() {
+                        _showSearch = false;
+                        _isUserSearch = false;
+                        _userResults = [];
+                        _searchController.clear();
+                      });
+                      _applyFilter(category: _activeCategory);
+                    },
+                  ),
                 ),
+                onChanged: _onSearchChanged,
+                onSubmitted: (_) {
+                  if (!_isUserSearch) _applyFilter(category: _activeCategory);
+                },
               ),
-              onSubmitted: (_) => _applyFilter(category: _activeCategory),
+              optionsViewBuilder: (ctx, onSel, opts) {
+                final theme = Theme.of(ctx);
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(12),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 280, maxWidth: 360),
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        shrinkWrap: true,
+                        children: opts.map((u) {
+                          final name = u['display_name'] as String? ?? '';
+                          final avatar = u['avatar_url'] as String?;
+                          final bio = u['bio'] as String?;
+                          return ListTile(
+                            dense: true,
+                            leading: CircleAvatar(
+                              radius: 18,
+                              backgroundImage: avatar != null ? NetworkImage(avatar) : null,
+                              child: avatar == null
+                                  ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                      style: theme.textTheme.bodySmall)
+                                  : null,
+                            ),
+                            title: Text('@$name',
+                                style: theme.textTheme.bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600)),
+                            subtitle: bio != null && bio.isNotEmpty
+                                ? Text(bio, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodySmall)
+                                : null,
+                            onTap: () => onSel(u),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
+        // User-Suchergebnisse
+        if (_isUserSearch) ...[
+          if (_isSearchingUsers)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            )
+          else if (_userResults.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                _searchController.text.length > 1
+                    ? 'Kein User gefunden'
+                    : 'Mindestens 2 Zeichen nach @ eingeben',
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                itemCount: _userResults.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, i) {
+                  final u = _userResults[i];
+                  final name = u['display_name'] as String? ?? 'Unbekannt';
+                  final avatar = u['avatar_url'] as String?;
+                  final bio = u['bio'] as String?;
+                  final uid = u['id'] as String?;
+                  return ListTile(
+                    leading: CircleAvatar(
+                      radius: 22,
+                      backgroundImage: avatar != null ? NetworkImage(avatar) : null,
+                      child: avatar == null
+                          ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?')
+                          : null,
+                    ),
+                    title: Text(name,
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600)),
+                    subtitle: bio != null && bio.isNotEmpty
+                        ? Text(bio, maxLines: 1, overflow: TextOverflow.ellipsis)
+                        : null,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: uid != null ? () => context.push('/profile/$uid') : null,
+                  );
+                },
+              ),
+            ),
+        ] else ...[
         SizedBox(
           height: 44,
           child: ListView(
@@ -313,6 +495,7 @@ class _CommunityRecipeFeedTabState
             },
           ),
         ),
+        ], // Ende else (kein User-Suche)
       ],
     );
   }
@@ -477,19 +660,23 @@ class _CommunityRecipeCard extends ConsumerWidget {
                       const SizedBox(width: 4),
                       Text('${recipe.cookingTimeMinutes} Min.', style: theme.textTheme.bodySmall),
                       if (recipe.category != null) ...[
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Icon(Icons.restaurant_outlined, size: 14, color: theme.colorScheme.primary),
                         const SizedBox(width: 4),
-                        Text(recipe.category!, style: theme.textTheme.bodySmall),
+                        Flexible(
+                          child: Text(recipe.category!,
+                              style: theme.textTheme.bodySmall,
+                              overflow: TextOverflow.ellipsis),
+                        ),
                       ],
-                  const Spacer(),
-                  Icon(Icons.comment_outlined, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 2),
-                  Text('${recipe.commentCount}', style: theme.textTheme.bodySmall),
-                  const SizedBox(width: 8),
-                  Icon(Icons.favorite_border_rounded, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 2),
-                  Text('${recipe.likeCount}', style: theme.textTheme.bodySmall),
+                      const Spacer(),
+                      Icon(Icons.comment_outlined, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 2),
+                      Text('${recipe.commentCount}', style: theme.textTheme.bodySmall),
+                      const SizedBox(width: 8),
+                      Icon(Icons.favorite_border_rounded, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 2),
+                      Text('${recipe.likeCount}', style: theme.textTheme.bodySmall),
                     ],
                   ),
                   if (recipe.tags.isNotEmpty) ...[
@@ -726,3 +913,159 @@ class _EmptyCommunityState extends StatelessWidget {
   }
 }
 
+// ─── User-Suche Tab ───────────────────────────────────────────────────────
+
+class _UserSearchTab extends ConsumerStatefulWidget {
+  const _UserSearchTab();
+
+  @override
+  ConsumerState<_UserSearchTab> createState() => _UserSearchTabState();
+}
+
+class _UserSearchTabState extends ConsumerState<_UserSearchTab> {
+  final _searchController = TextEditingController();
+  List<Map<String, dynamic>> _results = [];
+  bool _isSearching = false;
+  bool _hasSearched = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) {
+      setState(() { _results = []; _hasSearched = false; });
+      return;
+    }
+    setState(() => _isSearching = true);
+    try {
+      final supabase = SupabaseService.client;
+      final res = await supabase
+          .from('social_profiles')
+          .select('id, display_name, avatar_url, bio')
+          .ilike('display_name', '%$q%')
+          .limit(20);
+      setState(() {
+        _results = List<Map<String, dynamic>>.from(res as List);
+        _hasSearched = true;
+      });
+    } catch (_) {
+      setState(() { _results = []; _hasSearched = true; });
+    } finally {
+      setState(() => _isSearching = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: '@username oder Name suchen...',
+              prefixIcon: const Icon(Icons.person_search),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        _searchController.clear();
+                        _search('');
+                      },
+                    )
+                  : null,
+              isDense: true,
+            ),
+            onSubmitted: _search,
+            onChanged: (v) {
+              setState(() {});
+              if (v.length >= 2) _search(v);
+            },
+          ),
+        ),
+        if (_isSearching)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: CircularProgressIndicator(),
+          )
+        else if (_results.isEmpty && _hasSearched)
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              children: [
+                Icon(Icons.search_off, size: 48,
+                    color: theme.colorScheme.onSurfaceVariant),
+                const SizedBox(height: 12),
+                Text('Keine User gefunden.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant)),
+              ],
+            ),
+          )
+        else if (!_hasSearched)
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              children: [
+                Icon(Icons.people_outline, size: 48,
+                    color: theme.colorScheme.onSurfaceVariant),
+                const SizedBox(height: 12),
+                Text('Suche nach @username',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant)),
+                const SizedBox(height: 4),
+                Text('Finde andere User und entdecke ihre Rezepte.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant),
+                    textAlign: TextAlign.center),
+              ],
+            ),
+          )
+        else
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              itemCount: _results.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, i) {
+                final u = _results[i];
+                final name = u['display_name'] as String? ?? 'Unbekannt';
+                final avatar = u['avatar_url'] as String?;
+                final bio = u['bio'] as String?;
+                final uid = u['id'] as String?;
+                return ListTile(
+                  leading: CircleAvatar(
+                    radius: 22,
+                    backgroundImage: avatar != null ? NetworkImage(avatar) : null,
+                    child: avatar == null
+                        ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            style: theme.textTheme.titleMedium)
+                        : null,
+                  ),
+                  title: Text(name,
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600)),
+                  subtitle: bio != null && bio.isNotEmpty
+                      ? Text(bio,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall)
+                      : null,
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: uid != null
+                      ? () => context.push('/profile/$uid')
+                      : null,
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}

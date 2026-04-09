@@ -10,6 +10,8 @@ import 'package:kokomu/features/community/presentation/publish_recipe_sheet.dart
 import 'package:kokomu/features/community/presentation/publish_meal_plan_sheet.dart';
 import 'package:kokomu/features/community/presentation/spoonacular_provider.dart';
 import 'package:kokomu/features/recipes/presentation/recipe_detail_screen.dart';
+import 'package:kokomu/features/settings/presentation/subscription_provider.dart';
+import 'package:kokomu/features/settings/presentation/paywall_screen.dart';
 import 'package:kokomu/models/community_recipe.dart';
 import 'package:kokomu/models/community_meal_plan.dart';
 import 'package:kokomu/core/services/supabase_service.dart';
@@ -42,6 +44,30 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
 
   Future<void> _openPublishSheet() async {
     final currentTab = _tabController.index;
+    final isPro = ref.read(subscriptionProvider).valueOrNull?.isPro ?? false;
+
+    if (currentTab == 1 && !isPro) {
+      // Plan teilen – nur Pro
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('⭐ Plan teilen ist nur mit Pro verfügbar'),
+          action: SnackBarAction(
+            label: 'Pro holen',
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                builder: (_) => const PaywallScreen(),
+              );
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
     if (currentTab == 1) {
       await showModalBottomSheet<bool>(
         context: context,
@@ -118,8 +144,7 @@ class _CommunityRecipeFeedTabState
   bool _showSearch = false;
 
   static const _categories = [
-    'Frühstück', 'Mittagessen', 'Abendessen',
-    'Snack', 'Dessert', 'Backen', 'Vegetarisch', 'Vegan',
+    'Frühstück', 'Mittagessen', 'Abendessen', 'Snack',
   ];
 
   @override

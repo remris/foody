@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:confetti/confetti.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:share_plus/share_plus.dart';
@@ -40,19 +39,16 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
   bool _hideChecked = false;
   bool _groupedView = false;
   bool _shoppingMode = false;
-  late final ConfettiController _confettiController;
+  bool _showSuccessPulse = false;
 
   @override
   void initState() {
     super.initState();
-    _confettiController =
-        ConfettiController(duration: const Duration(seconds: 2));
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    _confettiController.dispose();
     super.dispose();
   }
 
@@ -536,7 +532,7 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
     final itemsAsync = ref.watch(shoppingListProvider);
     final theme = Theme.of(context);
 
-    // Konfetti auslösen wenn alle Items abgehakt
+    // Grüner Pulse wenn alle Items abgehakt
     ref.listen(shoppingListProvider, (prev, next) {
       final prevItems = prev?.valueOrNull;
       final nextItems = next.valueOrNull;
@@ -545,8 +541,11 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
           nextItems.every((i) => i.isChecked) &&
           prevItems != null &&
           !prevItems.every((i) => i.isChecked)) {
-        _confettiController.play();
         HapticFeedback.heavyImpact();
+        setState(() => _showSuccessPulse = true);
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          if (mounted) setState(() => _showSuccessPulse = false);
+        });
       }
     });
 
@@ -1134,28 +1133,35 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
         ],
       ), // Ende Column (normal mode)
     ),
-        // Konfetti-Overlay
-        Align(
-          alignment: Alignment.topCenter,
-          child: ConfettiWidget(
-            confettiController: _confettiController,
-            blastDirectionality: BlastDirectionality.explosive,
-            shouldLoop: false,
-            numberOfParticles: 30,
-            emissionFrequency: 0.05,
-            maxBlastForce: 20,
-            minBlastForce: 5,
-            gravity: 0.2,
-            colors: const [
-              Colors.green,
-              Colors.blue,
-              Colors.pink,
-              Colors.orange,
-              Colors.purple,
-              Colors.amber,
-            ],
+        // Grüner Erfolgs-Pulse
+        if (_showSuccessPulse)
+          IgnorePointer(
+            child: AnimatedOpacity(
+              opacity: _showSuccessPulse ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                color: Colors.green.withValues(alpha: 0.15),
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_rounded,
+                          color: Colors.green, size: 72),
+                      SizedBox(height: 12),
+                      Text(
+                        'Einkauf abgeschlossen! 🎉',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
       ],
     );
   }

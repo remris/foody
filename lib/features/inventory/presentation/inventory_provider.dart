@@ -205,6 +205,9 @@ final inventorySearchProvider = StateProvider<String>((ref) => '');
 // Reste-Filter: Nur Artikel mit niedriger Menge anzeigen
 final inventoryShowLeftoversProvider = StateProvider<bool>((ref) => false);
 
+// Geöffnet-Filter: Nur geöffnete Artikel anzeigen
+final inventoryShowOpenedProvider = StateProvider<bool>((ref) => false);
+
 // Sortier-Modus
 enum InventorySortMode { expiryDate, nameAZ, nameZA, newestFirst, category }
 
@@ -250,6 +253,7 @@ final filteredInventoryProvider = Provider<List<InventoryItem>>((ref) {
   final zone = ref.watch(storageZoneProvider);
   final scope = ref.watch(inventoryScopeProvider);
   final showLeftovers = ref.watch(inventoryShowLeftoversProvider);
+  final showOpened = ref.watch(inventoryShowOpenedProvider);
 
   var filtered = inventory;
 
@@ -263,23 +267,24 @@ final filteredInventoryProvider = Provider<List<InventoryItem>>((ref) {
       break;
   }
 
-  // Reste-Filter: Artikel die als Reste markiert sind oder niedrige Menge haben
+  // Reste-Filter
   if (showLeftovers) {
     filtered = filtered.where((item) {
-      // Explizit als Reste getaggt (z.B. nach dem Kochen eingetragen)
       if (item.tags.any((t) => t.toLowerCase() == 'reste')) return true;
-      // Kategorie "Gekochtes" (case-insensitive)
       if (item.ingredientCategory?.toLowerCase() == 'gekochtes') return true;
-      // Menge unter Mindestbestand
       if (item.quantity != null &&
           item.minThreshold > 0 &&
           item.quantity! <= item.minThreshold) return true;
-      // Menge sehr niedrig (≤ 1 Einheit) – z.B. letzte Flasche, letzte Dose
       if (item.quantity != null && item.quantity! > 0 && item.quantity! <= 1.0) {
         return true;
       }
       return false;
     }).toList();
+  }
+
+  // Geöffnet-Filter
+  if (showOpened) {
+    filtered = filtered.where((item) => item.isOpened).toList();
   }
 
   // Zonen-Filter

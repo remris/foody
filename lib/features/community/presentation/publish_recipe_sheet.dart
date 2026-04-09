@@ -43,8 +43,7 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
   final _ingredientAmountCtrl = TextEditingController();
 
   static const _categories = [
-    'Frühstück', 'Mittagessen', 'Abendessen',
-    'Snack', 'Dessert', 'Backen', 'Vegetarisch', 'Vegan',
+    'Frühstück', 'Mittagessen', 'Abendessen', 'Snack',
   ];
   static const _difficulties = ['Einfach', 'Mittel', 'Schwer'];
 
@@ -108,14 +107,13 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
   Future<void> _publish() async {
     final isNew = _tabController.index == 1;
 
-    if (_titleController.text.trim().isEmpty) {
-      _showSnack('Bitte einen Titel eingeben.');
-      return;
-    }
-
     FoodRecipe? recipe;
 
     if (isNew) {
+      if (_titleController.text.trim().isEmpty) {
+        _showSnack('Bitte einen Titel eingeben.');
+        return;
+      }
       // Aus den Eingaben ein FoodRecipe bauen
       if (_ingredients.isEmpty) {
         _showSnack('Bitte mindestens eine Zutat hinzufügen.');
@@ -151,7 +149,7 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
       );
     } else {
       if (_selectedRecipe == null) {
-        _showSnack('Bitte ein gespeichertes Rezept auswählen.');
+        _showSnack('Bitte ein Rezept auswählen.');
         return;
       }
       recipe = _selectedRecipe;
@@ -167,13 +165,13 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
       userId: user?.id ?? '',
       authorName: authorName,
     ).copyWith(
-      title: _titleController.text.trim(),
-      description: _descController.text.trim(),
-      category: _selectedCategory,
-      tags: List<String>.from(_tags),
-      difficulty: _difficulty,
-      cookingTimeMinutes: _cookingTime,
-      servings: _servings,
+      title: isNew ? _titleController.text.trim() : recipe.title,
+      description: isNew ? _descController.text.trim() : recipe.description,
+      category: _selectedCategory ?? recipe.category,
+      tags: _tags.isNotEmpty ? List<String>.from(_tags) : List<String>.from(recipe.tags),
+      difficulty: isNew ? _difficulty : recipe.difficulty,
+      cookingTimeMinutes: isNew ? _cookingTime : recipe.cookingTimeMinutes,
+      servings: isNew ? _servings : recipe.servings,
     );
 
     bool success = false;
@@ -259,29 +257,11 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
         backgroundColor: theme.colorScheme.surface,
         appBar: AppBar(
           backgroundColor: theme.colorScheme.surface,
-          title: const Text('Rezept veröffentlichen 🌟'),
+          title: const Text('Rezept veröffentlichen'),
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          actions: [
-            _isPublishing
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2)),
-                  )
-                : Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilledButton.icon(
-                      onPressed: _publish,
-                      icon: const Icon(Icons.send_rounded, size: 16),
-                      label: const Text('Veröffentlichen'),
-                    ),
-                  ),
-          ],
           bottom: TabBar(
             controller: _tabController,
             tabs: const [
@@ -290,23 +270,29 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
             ],
           ),
         ),
+        bottomNavigationBar: Padding(
+          padding: EdgeInsets.only(
+            left: 16, right: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 12, top: 8),
+          child: _isPublishing
+              ? const Center(child: CircularProgressIndicator())
+              : FilledButton.icon(
+                  onPressed: _publish,
+                  icon: const Icon(Icons.send_rounded, size: 16),
+                  label: const Text('Veröffentlichen'),
+                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                ),
+        ),
         body: TabBarView(
           controller: _tabController,
           children: [
             // ── Tab 1: Gespeichertes Rezept teilen ──────────────────────
             _ShareSavedTab(
               scrollController: scrollController,
-              titleController: _titleController,
-              descController: _descController,
-              tagController: _tagController,
               selectedRecipe: _selectedRecipe,
               selectedCategory: _selectedCategory,
               tags: _tags,
-              cookingTime: _cookingTime,
-              difficulty: _difficulty,
-              servings: _servings,
               categories: _categories,
-              difficulties: _difficulties,
+              tagController: _tagController,
               onRecipeSelected: (r) => setState(() {
                 _selectedRecipe = r;
                 _titleController.text = r.title;
@@ -315,9 +301,6 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
               onCategoryChanged: (c) => setState(() => _selectedCategory = c),
               onTagAdded: _addTag,
               onTagRemoved: (t) => setState(() => _tags.remove(t)),
-              onCookingTimeChanged: (v) => setState(() => _cookingTime = v),
-              onDifficultyChanged: (v) => setState(() => _difficulty = v),
-              onServingsChanged: (v) => setState(() => _servings = v),
             ),
             // ── Tab 2: Neues Rezept von Grund auf ───────────────────────
             _CreateNewTab(
@@ -507,45 +490,27 @@ Widget _buildMetaSection({
 // ─── Tab 1: Gespeichertes Rezept teilen ──────────────────────────────────────
 class _ShareSavedTab extends ConsumerWidget {
   final ScrollController scrollController;
-  final TextEditingController titleController;
-  final TextEditingController descController;
-  final TextEditingController tagController;
   final FoodRecipe? selectedRecipe;
   final String? selectedCategory;
   final List<String> tags;
-  final int cookingTime;
-  final String difficulty;
-  final int servings;
   final List<String> categories;
-  final List<String> difficulties;
   final ValueChanged<FoodRecipe> onRecipeSelected;
   final ValueChanged<String?> onCategoryChanged;
   final VoidCallback onTagAdded;
   final ValueChanged<String> onTagRemoved;
-  final ValueChanged<int> onCookingTimeChanged;
-  final ValueChanged<String> onDifficultyChanged;
-  final ValueChanged<int> onServingsChanged;
+  final TextEditingController tagController;
 
   const _ShareSavedTab({
     required this.scrollController,
-    required this.titleController,
-    required this.descController,
-    required this.tagController,
     required this.selectedRecipe,
     required this.selectedCategory,
     required this.tags,
-    required this.cookingTime,
-    required this.difficulty,
-    required this.servings,
     required this.categories,
-    required this.difficulties,
     required this.onRecipeSelected,
     required this.onCategoryChanged,
     required this.onTagAdded,
     required this.onTagRemoved,
-    required this.onCookingTimeChanged,
-    required this.onDifficultyChanged,
-    required this.onServingsChanged,
+    required this.tagController,
   });
 
   @override
@@ -557,67 +522,147 @@ class _ShareSavedTab extends ConsumerWidget {
       controller: scrollController,
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Gespeichertes Rezept wählen', style: theme.textTheme.labelLarge),
-        const SizedBox(height: 8),
+        Text('Wähle ein Rezept zum Teilen',
+            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text('Alle Infos werden direkt vom Rezept übernommen – du kannst sie später bearbeiten.',
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        const SizedBox(height: 12),
         savedAsync.when(
           loading: () => const LinearProgressIndicator(),
-          error: (e, _) =>
-              Text('Fehler: $e', style: TextStyle(color: theme.colorScheme.error)),
-          data: (recipes) => recipes.isEmpty
-              ? Text('Noch keine gespeicherten Rezepte.',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant))
-              : SizedBox(
-                  height: 52,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: recipes.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (_, i) {
-                      final r = recipes[i];
-                      final isSelected = selectedRecipe?.id == r.id;
-                      return ChoiceChip(
-                        label: Text(r.title,
-                            style: const TextStyle(fontSize: 12)),
-                        selected: isSelected,
-                        onSelected: (_) => onRecipeSelected(r),
-                      );
-                    },
-                  ),
+          error: (e, _) => Text('Fehler: $e', style: TextStyle(color: theme.colorScheme.error)),
+          data: (recipes) {
+            final own = recipes.where((r) => r.source == 'own' || r.source == 'ai').toList();
+            if (own.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Center(
+                  child: Text('Noch keine eigenen Rezepte.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant)),
                 ),
+              );
+            }
+            return Column(
+              children: own.map((r) {
+                final isSelected = selectedRecipe?.id == r.id;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  elevation: isSelected ? 4 : 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: isSelected
+                        ? BorderSide(color: theme.colorScheme.primary, width: 2)
+                        : BorderSide.none,
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => onRecipeSelected(r),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          if (r.imageUrl != null)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(r.imageUrl!,
+                                  width: 64, height: 64, fit: BoxFit.cover),
+                            )
+                          else
+                            Container(
+                              width: 64, height: 64,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.restaurant_menu,
+                                  color: theme.colorScheme.onSurfaceVariant),
+                            ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(r.title,
+                                    style: theme.textTheme.titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 2),
+                                Text('${r.cookingTimeMinutes} Min. · ${r.difficulty}',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant)),
+                                if (r.category != null) ...[
+                                  const SizedBox(height: 4),
+                                  Chip(
+                                    label: Text(r.category!,
+                                        style: const TextStyle(fontSize: 11)),
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          if (isSelected)
+                            Icon(Icons.check_circle_rounded,
+                                color: theme.colorScheme.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            );
+          },
         ),
-        const Divider(height: 28),
-        TextField(
-          controller: titleController,
-          decoration: const InputDecoration(
-              labelText: 'Titel *', hintText: 'z.B. Omas Apfelkuchen'),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: descController,
-          maxLines: 3,
-          decoration: const InputDecoration(
-              labelText: 'Beschreibung',
-              hintText: 'Was macht dein Rezept besonders?'),
-        ),
-        const SizedBox(height: 16),
-        _buildMetaSection(
-          context: context,
-          selectedCategory: selectedCategory,
-          categories: categories,
-          difficulties: difficulties,
-          difficulty: difficulty,
-          cookingTime: cookingTime,
-          servings: servings,
-          tags: tags,
-          tagController: tagController,
-          onCategoryChanged: onCategoryChanged,
-          onTagAdded: onTagAdded,
-          onTagRemoved: onTagRemoved,
-          onCookingTimeChanged: onCookingTimeChanged,
-          onDifficultyChanged: onDifficultyChanged,
-          onServingsChanged: onServingsChanged,
-        ),
+        if (selectedRecipe != null) ...[
+          const Divider(height: 28),
+          Text('Kategorie anpassen (optional)',
+              style: theme.textTheme.labelLarge),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: categories.map((cat) {
+              final sel = selectedCategory == cat;
+              return ChoiceChip(
+                label: Text(cat),
+                selected: sel,
+                onSelected: (_) => onCategoryChanged(sel ? null : cat),
+                visualDensity: VisualDensity.compact,
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          Text('Tags hinzufügen (optional)', style: theme.textTheme.labelLarge),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: tagController,
+                  decoration: const InputDecoration(
+                      hintText: 'Tag eingeben und Enter drücken', isDense: true),
+                  onSubmitted: (_) => onTagAdded(),
+                ),
+              ),
+              IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: onTagAdded),
+            ],
+          ),
+          if (tags.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              children: tags
+                  .map((t) => Chip(
+                        label: Text(t),
+                        onDeleted: () => onTagRemoved(t),
+                        visualDensity: VisualDensity.compact,
+                      ))
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: 80),
+        ],
       ],
     );
   }

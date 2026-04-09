@@ -35,6 +35,11 @@ class _PublishMealPlanSheetState extends ConsumerState<PublishMealPlanSheet> {
   final _tagCtrl   = TextEditingController();
   final _tagFocus  = FocusNode();
   final List<String> _selectedTags = [];
+  String? _selectedCategory;
+
+  static const _categories = [
+    'Frühstück', 'Mittagessen', 'Abendessen', 'Snack',
+  ];
 
   @override
   void initState() {
@@ -244,6 +249,34 @@ class _PublishMealPlanSheetState extends ConsumerState<PublishMealPlanSheet> {
                       hintText: 'Erzähl anderen was besonders ist...',
                       prefixIcon: Icon(Icons.description_outlined),
                       alignLabelWithHint: true,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Kategorie
+                  Text('Kategorie',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      )),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 36,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: _categories.map((cat) {
+                        final sel = _selectedCategory == cat;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(cat, style: const TextStyle(fontSize: 12)),
+                            selected: sel,
+                            onSelected: (_) => setState(
+                                () => _selectedCategory = sel ? null : cat),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
                   const SizedBox(height: 20),

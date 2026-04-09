@@ -58,6 +58,8 @@ class FoodRecipe {
   final String? imageUrl;
   /// Tags z.B. ['Vegan', 'Airfryer', 'OnePot']
   final List<String> tags;
+  /// Mahlzeitkategorie z.B. 'Frühstück', 'Mittagessen', 'Abendessen', 'Snack'
+  final String? category;
   /// 'own' = selbst erstellt, 'community' = von Community gespeichert, 'ai' = KI-generiert
   /// 'manual' ist ein Legacy-Wert und wird zu 'own' normalisiert
   final String? _source;
@@ -80,6 +82,7 @@ class FoodRecipe {
     this.nutrition,
     this.imageUrl,
     this.tags = const [],
+    this.category,
     String source = 'ai',
     this.savedRecipeId,
   }) : _source = source;
@@ -106,6 +109,7 @@ class FoodRecipe {
             : null,
         imageUrl: json['imageUrl'] as String? ?? json['image_url'] as String?,
         tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ?? const [],
+        category: json['category'] as String?,
         source: (json['source'] as String?) ?? 'ai',
         savedRecipeId: (json['savedRecipeId'] as String?) ?? (json['saved_recipe_id'] as String?),
       );
@@ -122,6 +126,7 @@ class FoodRecipe {
         'nutrition': nutrition?.toJson(),
         'imageUrl': imageUrl,
         'tags': tags,
+        'category': category,
         'source': source,
         'savedRecipeId': savedRecipeId,
       };
@@ -138,6 +143,7 @@ class FoodRecipe {
     NutritionInfo? nutrition,
     String? imageUrl,
     List<String>? tags,
+    String? category,
     String? source,
     String? savedRecipeId,
   }) =>
@@ -153,6 +159,7 @@ class FoodRecipe {
         nutrition: nutrition ?? this.nutrition,
         imageUrl: imageUrl ?? this.imageUrl,
         tags: tags ?? this.tags,
+        category: category ?? this.category,
         source: source ?? this.source,
         savedRecipeId: savedRecipeId ?? this.savedRecipeId,
       );

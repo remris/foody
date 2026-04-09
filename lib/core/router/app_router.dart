@@ -149,7 +149,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           // ── Vorrat & Einkauf (kombinierter Tab) ──
           GoRoute(
             path: '/inventory',
-            builder: (_, __) => const PantryShoppingScreen(initialTab: 0),
+            builder: (_, __) => const PantryShoppingScreen(initialTab: 1),
             routes: [
               GoRoute(
                 path: 'detail',
@@ -161,7 +161,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/shopping',
-            builder: (_, __) => const PantryShoppingScreen(initialTab: 1),
+            builder: (_, __) => const PantryShoppingScreen(initialTab: 0),
           ),
           GoRoute(
             path: '/scanner',

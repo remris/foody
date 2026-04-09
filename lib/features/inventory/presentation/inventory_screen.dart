@@ -8,6 +8,7 @@ import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
 import 'package:kokomu/features/household/presentation/household_provider.dart';
 import 'package:kokomu/features/inventory/presentation/add_inventory_item_sheet.dart';
 import 'package:kokomu/features/inventory/presentation/fridge_scan_sheet.dart';
+import 'package:kokomu/features/inventory/presentation/item_detail_screen.dart';
 import 'package:kokomu/features/recipes/presentation/ingredient_selection_sheet.dart';
 import 'package:kokomu/features/inventory/presentation/inventory_stats_card.dart';
 import 'package:kokomu/models/inventory_item.dart';
@@ -57,8 +58,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     final categories = ref.watch(categoriesProvider);
     final selectedCategories = ref.watch(selectedCategoriesProvider);
     final sortMode = ref.watch(inventorySortModeProvider);
-    final selectedZone = ref.watch(storageZoneProvider);
-    final showLeftovers = ref.watch(inventoryShowLeftoversProvider);
     // Scope direkt watchen damit der Screen bei Änderung rebuildet
     ref.watch(inventoryScopeProvider);
     final theme = Theme.of(context);
@@ -284,11 +283,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
             },
           ),
 
-          // ── Filter-Zeile: Zone + Kategorie-Button ──────────────────────
+          // ── Filter-Zeile ──────────────────────────────────────────────
           _InventoryFilterRow(
             categories: categories,
             selectedCategories: selectedCategories,
-            selectedZone: selectedZone,
           ),
 
           // ── Anzahl + Rezepte-Button ──
@@ -352,7 +350,17 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 ),
               ),
               data: (_) {
+                final showLeftovers = ref.watch(inventoryShowLeftoversProvider);
+                final showOpened = ref.watch(inventoryShowOpenedProvider);
                 if (items.isEmpty) {
+                  if (showOpened && allItems.isNotEmpty) {
+                    return _EmptyFilterResult(
+                      icon: Icons.lock_open_rounded,
+                      title: 'Keine geöffneten Artikel',
+                      subtitle: 'Markiere Artikel als geöffnet über die Detailansicht.',
+                      onClear: () => ref.read(inventoryShowOpenedProvider.notifier).state = false,
+                    );
+                  }
                   if (showLeftovers && allItems.isNotEmpty) {
                     return _EmptyFilterResult(
                       icon: Icons.kitchen_rounded,
@@ -407,85 +415,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
 
   /// Baut eine nach Kategorien gruppierte Ansicht mit Überschriften.
   Widget _buildCategoryGrouped(BuildContext context, List<InventoryItem> items) {
-    final theme = Theme.of(context);
-
-    // Gruppen aufbauen: Kategorie → Items
-    final Map<String, List<InventoryItem>> groups = {};
-    for (final item in items) {
-      final cat = item.ingredientCategory?.isNotEmpty == true
-          ? item.ingredientCategory!
-          : 'Sonstiges';
-      groups.putIfAbsent(cat, () => []).add(item);
-    }
-    // Alphabetisch sortiert, "Sonstiges" immer ans Ende
-    final sorted = groups.keys.toList()
-      ..sort((a, b) {
-        if (a == 'Sonstiges') return 1;
-        if (b == 'Sonstiges') return -1;
-        return a.compareTo(b);
-      });
-
-    // Flache Widget-Liste aus Überschriften + Items aufbauen
-    final widgets = <Widget>[];
-    for (final cat in sorted) {
-      final catItems = groups[cat]!;
-      final foodCat = FoodCategory.fromLabel(cat);
-
-      // Kategorie-Überschrift
-      widgets.add(
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-          child: Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: (foodCat?.color ?? theme.colorScheme.surfaceContainerHighest)
-                      .withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  foodCat?.icon ?? Icons.category_outlined,
-                  size: 16,
-                  color: foodCat?.color ?? theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                cat,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '(${catItems.length})',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-
-      // Items der Kategorie
-      for (var i = 0; i < catItems.length; i++) {
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _InventoryItemCard(item: catItems[i]),
-          ),
-        );
-      }
-    }
-    widgets.add(const SizedBox(height: 88));
-
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: widgets,
-    );
+    return _CollapsibleCategoryList(items: items);
   }
 
   void _showAddSheet(BuildContext context) {
@@ -501,6 +431,130 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
 }
 
 
+
+/// Einklappbare Kategorie-Listenansicht
+class _CollapsibleCategoryList extends StatefulWidget {
+  final List<InventoryItem> items;
+  const _CollapsibleCategoryList({required this.items});
+
+  @override
+  State<_CollapsibleCategoryList> createState() =>
+      _CollapsibleCategoryListState();
+}
+
+class _CollapsibleCategoryListState extends State<_CollapsibleCategoryList> {
+  // Welche Kategorien sind eingeklappt?
+  final Set<String> _collapsed = {};
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    // Gruppen aufbauen
+    final Map<String, List<InventoryItem>> groups = {};
+    for (final item in widget.items) {
+      final cat = item.ingredientCategory?.isNotEmpty == true
+          ? item.ingredientCategory!
+          : 'Sonstiges';
+      groups.putIfAbsent(cat, () => []).add(item);
+    }
+    final sorted = groups.keys.toList()
+      ..sort((a, b) {
+        if (a == 'Sonstiges') return 1;
+        if (b == 'Sonstiges') return -1;
+        return a.compareTo(b);
+      });
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 88),
+      itemCount: sorted.length,
+      itemBuilder: (context, catIndex) {
+        final cat = sorted[catIndex];
+        final catItems = groups[cat]!;
+        final foodCat = FoodCategory.fromLabel(cat);
+        final isCollapsed = _collapsed.contains(cat);
+        final catColor = foodCat?.color ?? theme.colorScheme.onSurfaceVariant;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Kategorie-Header (tippbar zum Ein-/Ausklappen) ──────────
+            InkWell(
+              onTap: () => setState(() {
+                if (isCollapsed) {
+                  _collapsed.remove(cat);
+                } else {
+                  _collapsed.add(cat);
+                }
+              }),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 12, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: catColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        foodCat?.icon ?? Icons.category_outlined,
+                        size: 16,
+                        color: catColor,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      cat,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '(${catItems.length})',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const Spacer(),
+                    AnimatedRotation(
+                      turns: isCollapsed ? -0.25 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        Icons.expand_more_rounded,
+                        size: 20,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // ── Items (animiert ausblenden) ─────────────────────────────
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 200),
+              crossFadeState: isCollapsed
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              firstChild: Column(
+                children: catItems
+                    .map((item) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: _InventoryItemCard(item: item),
+                        ))
+                    .toList(),
+              ),
+              secondChild: const SizedBox.shrink(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
 
 /// Sheet: Items auswählen und transferieren (Privat ↔ Haushalt)
 class _TransferItemsSheet extends ConsumerStatefulWidget {
@@ -706,17 +760,14 @@ class _TransferItemsSheetState extends ConsumerState<_TransferItemsSheet> {
   }
 }
 
-/// Kompakte Filter-Zeile die Zone-Chips + einen "Mehr"-Button kombiniert.
-/// Der "Mehr"-Button öffnet ein BottomSheet mit Kategorie-Mehrfachauswahl.
+/// Filter-Zeile: Alle | Reste | Geöffnete | Kategorien
 class _InventoryFilterRow extends ConsumerWidget {
   final List<dynamic> categories;
   final Set<String> selectedCategories;
-  final dynamic selectedZone;
 
   const _InventoryFilterRow({
     required this.categories,
     required this.selectedCategories,
-    required this.selectedZone,
   });
 
   @override
@@ -724,6 +775,10 @@ class _InventoryFilterRow extends ConsumerWidget {
     final theme = Theme.of(context);
     final hasActiveCategories = selectedCategories.isNotEmpty;
     final showLeftovers = ref.watch(inventoryShowLeftoversProvider);
+    final showOpened = ref.watch(inventoryShowOpenedProvider);
+
+    // "Alle" ist aktiv wenn kein anderer Filter gesetzt ist
+    final showAll = !showLeftovers && !showOpened && selectedCategories.isEmpty;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 4, 0, 2),
@@ -732,7 +787,27 @@ class _InventoryFilterRow extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            // Reste-Chip
+            // Alle
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: FilterChip(
+                label: const Text('Alle', style: TextStyle(fontSize: 12)),
+                selected: showAll,
+                selectedColor: theme.colorScheme.primaryContainer,
+                labelStyle: TextStyle(
+                  color: showAll ? theme.colorScheme.onPrimaryContainer : null,
+                  fontWeight: showAll ? FontWeight.bold : null,
+                ),
+                showCheckmark: false,
+                visualDensity: VisualDensity.compact,
+                onSelected: (_) {
+                  ref.read(inventoryShowLeftoversProvider.notifier).state = false;
+                  ref.read(inventoryShowOpenedProvider.notifier).state = false;
+                  ref.read(selectedCategoriesProvider.notifier).state = {};
+                },
+              ),
+            ),
+            // Reste
             Padding(
               padding: const EdgeInsets.only(right: 6),
               child: FilterChip(
@@ -747,59 +822,58 @@ class _InventoryFilterRow extends ConsumerWidget {
                 selected: showLeftovers,
                 selectedColor: theme.colorScheme.tertiaryContainer,
                 labelStyle: TextStyle(
-                  color: showLeftovers
-                      ? theme.colorScheme.onTertiaryContainer
-                      : null,
+                  color: showLeftovers ? theme.colorScheme.onTertiaryContainer : null,
                   fontWeight: showLeftovers ? FontWeight.bold : null,
                 ),
                 showCheckmark: false,
                 visualDensity: VisualDensity.compact,
-                tooltip: 'Artikel mit Reste-Tag, niedriger Menge (≤1) oder unter Mindestbestand',
+                tooltip: 'Artikel mit niedriger Menge oder Reste-Tag',
                 onSelected: (val) {
                   ref.read(inventoryShowLeftoversProvider.notifier).state = val;
+                  if (val) {
+                    ref.read(inventoryShowOpenedProvider.notifier).state = false;
+                  }
                 },
               ),
             ),
-            Container(
-              height: 20,
-              width: 1,
-              color: theme.colorScheme.outlineVariant,
-              margin: const EdgeInsets.only(right: 6),
-            ),
-            // Zone-Chips
-            ...StorageZone.values.map((zone) {
-              final isSelected = selectedZone == zone;
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: FilterChip(
-                  label: Text('${zone.emoji} ${zone.label}'),
-                  selected: isSelected,
-                  selectedColor: theme.colorScheme.primaryContainer,
-                  labelStyle: TextStyle(
-                    color: isSelected
-                        ? theme.colorScheme.onPrimaryContainer
-                        : null,
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : null,
-                  ),
-                  showCheckmark: false,
-                  visualDensity: VisualDensity.compact,
-                  onSelected: (_) {
-                    ref.read(storageZoneProvider.notifier).state = zone;
-                    ref.read(selectedCategoriesProvider.notifier).state = {};
-                  },
+            // Geöffnete
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: FilterChip(
+                avatar: Icon(
+                  Icons.lock_open_rounded,
+                  size: 14,
+                  color: showOpened
+                      ? Colors.orange.shade700
+                      : theme.colorScheme.onSurfaceVariant,
                 ),
-              );
-            }),
+                label: const Text('Geöffnete', style: TextStyle(fontSize: 12)),
+                selected: showOpened,
+                selectedColor: Colors.orange.withValues(alpha: 0.15),
+                labelStyle: TextStyle(
+                  color: showOpened ? Colors.orange.shade800 : null,
+                  fontWeight: showOpened ? FontWeight.bold : null,
+                ),
+                showCheckmark: false,
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Bereits geöffnete Artikel anzeigen',
+                onSelected: (val) {
+                  ref.read(inventoryShowOpenedProvider.notifier).state = val;
+                  if (val) {
+                    ref.read(inventoryShowLeftoversProvider.notifier).state = false;
+                  }
+                },
+              ),
+            ),
             // Trennlinie
             if (categories.isNotEmpty) ...[
               Container(
                 height: 20,
                 width: 1,
                 color: theme.colorScheme.outlineVariant,
-                margin: const EdgeInsets.symmetric(horizontal: 6),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
               ),
-              // Kategorie-Button (zeigt Anzahl aktiver Filter)
+              // Kategorie-Button
               FilterChip(
                 avatar: Icon(
                   Icons.filter_list_rounded,
@@ -1162,13 +1236,10 @@ class _InventoryItemCard extends ConsumerWidget {
       onDismissed: (_) =>
           ref.read(inventoryProvider.notifier).deleteItem(item.id),
       child: GestureDetector(
-        onTap: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ItemDetailScreen(item: item),
           ),
-          builder: (_) => AddInventoryItemSheet(existingItem: item),
         ),
         child: Card(
           child: Padding(

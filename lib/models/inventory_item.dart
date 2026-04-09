@@ -50,6 +50,7 @@ class InventoryItem {
   final String? nutriScore; // 'a','b','c','d','e' von OpenFoodFacts
   final String? householdId;
   final DateTime createdAt;
+  final DateTime? openedAt; // neu: Geöffnet-Datum
 
   const InventoryItem({
     required this.id,
@@ -67,10 +68,12 @@ class InventoryItem {
     this.nutriScore,
     this.householdId,
     required this.createdAt,
+    this.openedAt,
   });
 
   /// Ist dieses Item ein Haushalt-Item?
   bool get isHousehold => householdId != null;
+  bool get isOpened => openedAt != null;
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) => InventoryItem(
         id: json['id'] as String,
@@ -93,6 +96,9 @@ class InventoryItem {
         nutriScore: json['nutri_score'] as String?,
         householdId: json['household_id'] as String?,
         createdAt: DateTime.parse(json['created_at'] as String),
+        openedAt: json['opened_at'] != null
+            ? DateTime.parse(json['opened_at'] as String)
+            : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -111,6 +117,7 @@ class InventoryItem {
         'nutri_score': nutriScore,
         'household_id': householdId,
         'created_at': createdAt.toIso8601String(),
+        'opened_at': openedAt?.toIso8601String(),
       };
 
   InventoryItem copyWith({
@@ -129,6 +136,7 @@ class InventoryItem {
     String? nutriScore,
     Object? householdId = _unset,
     DateTime? createdAt,
+    Object? openedAt = _unset,
   }) =>
       InventoryItem(
         id: id ?? this.id,
@@ -148,9 +156,9 @@ class InventoryItem {
             ? this.householdId
             : householdId as String?,
         createdAt: createdAt ?? this.createdAt,
+        openedAt: openedAt == _unset ? this.openedAt : openedAt as DateTime?,
       );
 }
 
 // Sentinel für copyWith um null explizit setzen zu können
 const _unset = Object();
-
