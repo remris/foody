@@ -41,12 +41,26 @@ class InventoryRepositoryImpl implements InventoryRepository {
     final json = item.toJson()..remove('id');
     // Entferne household_id wenn null, damit es vor der Migration nicht crasht
     if (json['household_id'] == null) json.remove('household_id');
-    final data = await _client
-        .from(AppConstants.tableUserInventory)
-        .insert(json)
-        .select()
-        .single();
-    return InventoryItem.fromJson(data);
+    try {
+      final data = await _client
+          .from(AppConstants.tableUserInventory)
+          .insert(json)
+          .select()
+          .single();
+      return InventoryItem.fromJson(data);
+    } catch (e) {
+      // Fallback: nutrient_info-Spalte existiert noch nicht → ohne Nährwerte speichern
+      if (e.toString().contains('nutrient_info')) {
+        json.remove('nutrient_info');
+        final data = await _client
+            .from(AppConstants.tableUserInventory)
+            .insert(json)
+            .select()
+            .single();
+        return InventoryItem.fromJson(data);
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -63,13 +77,27 @@ class InventoryRepositoryImpl implements InventoryRepository {
   Future<InventoryItem> updateItem(InventoryItem item) async {
     final json = item.toJson();
     if (json['household_id'] == null) json.remove('household_id');
-    final data = await _client
-        .from(AppConstants.tableUserInventory)
-        .update(json)
-        .eq('id', item.id)
-        .select()
-        .single();
-    return InventoryItem.fromJson(data);
+    try {
+      final data = await _client
+          .from(AppConstants.tableUserInventory)
+          .update(json)
+          .eq('id', item.id)
+          .select()
+          .single();
+      return InventoryItem.fromJson(data);
+    } catch (e) {
+      if (e.toString().contains('nutrient_info')) {
+        json.remove('nutrient_info');
+        final data = await _client
+            .from(AppConstants.tableUserInventory)
+            .update(json)
+            .eq('id', item.id)
+            .select()
+            .single();
+        return InventoryItem.fromJson(data);
+      }
+      rethrow;
+    }
   }
 
   @override

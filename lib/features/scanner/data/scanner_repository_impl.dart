@@ -29,7 +29,6 @@ class ScannerRepositoryImpl implements ScannerRepository {
       final tags = product['categories_tags'] as List<dynamic>?;
       String? category;
       if (tags != null && tags.isNotEmpty) {
-        // Versuche OpenFoodFacts-Tags auf vordefinierte Kategorien zu mappen
         for (final tag in tags) {
           final mapped = FoodCategory.fromOpenFoodFacts(tag as String);
           if (mapped != null) {
@@ -37,12 +36,34 @@ class ScannerRepositoryImpl implements ScannerRepository {
             break;
           }
         }
-        // Fallback: ersten Tag bereinigen
         category ??= _cleanCategory(tags.first as String);
       }
 
       final imageUrl = product['image_url'] as String?;
       final nutriScore = (product['nutriscore_grade'] as String?)?.toLowerCase();
+
+      // Nährwerte aus OpenFoodFacts auslesen
+      final nutriments = product['nutriments'] as Map<String, dynamic>?;
+      IngredientNutrients? nutrients;
+      if (nutriments != null) {
+        final kcal = (nutriments['energy-kcal_100g'] as num?)?.toDouble();
+        final protein = (nutriments['proteins_100g'] as num?)?.toDouble();
+        final fat = (nutriments['fat_100g'] as num?)?.toDouble();
+        final carbs = (nutriments['carbohydrates_100g'] as num?)?.toDouble();
+        final fiber = (nutriments['fiber_100g'] as num?)?.toDouble();
+        final salt = (nutriments['salt_100g'] as num?)?.toDouble();
+
+        if (kcal != null || protein != null || fat != null || carbs != null) {
+          nutrients = IngredientNutrients(
+            kcalPer100g: kcal,
+            proteinPer100g: protein,
+            fatPer100g: fat,
+            carbsPer100g: carbs,
+            fiberPer100g: fiber,
+            saltPer100g: salt,
+          );
+        }
+      }
 
       return Ingredient(
         id: barcode,
@@ -51,6 +72,7 @@ class ScannerRepositoryImpl implements ScannerRepository {
         category: category,
         imageUrl: imageUrl,
         nutriScore: nutriScore,
+        nutrients: nutrients,
       );
     } catch (_) {
       return null;

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kokomu/core/services/ingredient_search_provider.dart';
+import 'package:kokomu/core/services/nutrition_service.dart';
 import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
 
 /// BottomSheet zur Auswahl von Zutaten aus dem Inventar für die Rezeptgenerierung.
@@ -25,7 +27,13 @@ class _IngredientSelectionSheetState
   @override
   Widget build(BuildContext context) {
     final items = ref.watch(inventoryProvider).valueOrNull ?? [];
+    final nutritionService = ref.watch(nutritionServiceProvider);
     final theme = Theme.of(context);
+
+    // Nährwert-Status der ausgewählten Zutaten
+    final missingNutrition = _selected.isNotEmpty
+        ? nutritionService.getMissingNutrition(_selected.toList())
+        : <String>[];
 
     return DraggableScrollableSheet(
       initialChildSize: 0.75,
@@ -63,6 +71,39 @@ class _IngredientSelectionSheetState
                 ),
               ),
               const SizedBox(height: 8),
+              // Warnung wenn Nährwerte fehlen
+              if (missingNutrition.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: theme.colorScheme.error.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: theme.colorScheme.error,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${missingNutrition.length} Zutat(en) ohne Nährwerte: '
+                          '${missingNutrition.take(3).join(", ")}'
+                          '${missingNutrition.length > 3 ? " ..." : ""}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               // Alle / Keine Buttons
               Row(
                 children: [
@@ -92,13 +133,27 @@ class _IngredientSelectionSheetState
                     final item = items[index];
                     final isSelected =
                         _selected.contains(item.ingredientName);
+                    final nutrition =
+                        nutritionService.getNutrition(item.ingredientName);
+                    final hasNutrition = nutrition != null;
+
                     return CheckboxListTile(
                       value: isSelected,
-                      title: Text(item.ingredientName),
-                      subtitle: item.ingredientCategory != null
-                          ? Text(item.ingredientCategory!,
-                              style: theme.textTheme.bodySmall)
-                          : null,
+                      title: Row(
+                        children: [
+                          Expanded(child: Text(item.ingredientName)),
+                          // Nährwert-Indikator
+                          _NutritionBadge(
+                            hasNutrition: hasNutrition,
+                            source: nutrition?.source,
+                          ),
+                        ],
+                      ),
+                      subtitle: _buildSubtitle(
+                        item.ingredientCategory,
+                        nutrition,
+                        theme,
+                      ),
                       secondary: item.ingredientImageUrl != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(8),
@@ -160,5 +215,87 @@ class _IngredientSelectionSheetState
       },
     );
   }
+
+  Widget? _buildSubtitle(
+    String? category,
+    NutritionInfo? nutrition,
+    ThemeData theme,
+  ) {
+    if (category == null && nutrition == null) return null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (category != null)
+          Text(category, style: theme.textTheme.bodySmall),
+        if (nutrition != null)
+          Text(
+            '${nutrition.kcalPer100g.round()} kcal · '
+            '${nutrition.proteinPer100g.toStringAsFixed(1)}g P · '
+            '${nutrition.fatPer100g.toStringAsFixed(1)}g F · '
+            '${nutrition.carbsPer100g.toStringAsFixed(1)}g K',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.primary.withValues(alpha: 0.7),
+            ),
+          ),
+      ],
+    );
+  }
 }
 
+/// Badge das den Nährwert-Status einer Zutat anzeigt.
+class _NutritionBadge extends StatelessWidget {
+  final bool hasNutrition;
+  final NutritionSource? source;
+
+  const _NutritionBadge({required this.hasNutrition, this.source});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (!hasNutrition) {
+      return Tooltip(
+        message: 'Keine Nährwerte verfügbar',
+        child: Icon(
+          Icons.error_outline,
+          size: 16,
+          color: theme.colorScheme.error.withValues(alpha: 0.7),
+        ),
+      );
+    }
+
+    final (icon, tooltip, color) = switch (source) {
+      NutritionSource.scanned => (
+          Icons.qr_code_scanner,
+          'Nährwerte gescannt (OpenFoodFacts)',
+          Colors.green,
+        ),
+      NutritionSource.catalog => (
+          Icons.menu_book,
+          'Nährwerte aus Katalog',
+          theme.colorScheme.primary,
+        ),
+      NutritionSource.manual => (
+          Icons.edit,
+          'Nährwerte manuell eingegeben',
+          Colors.orange,
+        ),
+      NutritionSource.estimated => (
+          Icons.auto_fix_high,
+          'Nährwerte geschätzt (Durchschnitt)',
+          Colors.amber,
+        ),
+      _ => (
+          Icons.check_circle_outline,
+          'Nährwerte vorhanden',
+          theme.colorScheme.primary,
+        ),
+    };
+
+    return Tooltip(
+      message: tooltip,
+      child: Icon(icon, size: 16, color: color.withValues(alpha: 0.7)),
+    );
+  }
+}

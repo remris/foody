@@ -1,3 +1,60 @@
+/// Nährwerte pro 100g – werden beim Barcode-Scan von OpenFoodFacts befüllt.
+class IngredientNutrients {
+  final double? kcalPer100g;
+  final double? proteinPer100g;
+  final double? fatPer100g;
+  final double? carbsPer100g;
+  final double? fiberPer100g;
+  final double? saltPer100g;
+
+  const IngredientNutrients({
+    this.kcalPer100g,
+    this.proteinPer100g,
+    this.fatPer100g,
+    this.carbsPer100g,
+    this.fiberPer100g,
+    this.saltPer100g,
+  });
+
+  bool get hasData =>
+      kcalPer100g != null ||
+      proteinPer100g != null ||
+      fatPer100g != null ||
+      carbsPer100g != null;
+
+  factory IngredientNutrients.fromJson(Map<String, dynamic> json) =>
+      IngredientNutrients(
+        kcalPer100g: (json['kcal_100g'] as num?)?.toDouble(),
+        proteinPer100g: (json['protein_100g'] as num?)?.toDouble(),
+        fatPer100g: (json['fat_100g'] as num?)?.toDouble(),
+        carbsPer100g: (json['carbs_100g'] as num?)?.toDouble(),
+        fiberPer100g: (json['fiber_100g'] as num?)?.toDouble(),
+        saltPer100g: (json['salt_100g'] as num?)?.toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'kcal_100g': kcalPer100g,
+        'protein_100g': proteinPer100g,
+        'fat_100g': fatPer100g,
+        'carbs_100g': carbsPer100g,
+        'fiber_100g': fiberPer100g,
+        'salt_100g': saltPer100g,
+      };
+
+  /// Berechnet die Nährwerte für eine gegebene Menge in Gramm.
+  IngredientNutrients forGrams(double grams) {
+    final factor = grams / 100.0;
+    return IngredientNutrients(
+      kcalPer100g: kcalPer100g != null ? kcalPer100g! * factor : null,
+      proteinPer100g: proteinPer100g != null ? proteinPer100g! * factor : null,
+      fatPer100g: fatPer100g != null ? fatPer100g! * factor : null,
+      carbsPer100g: carbsPer100g != null ? carbsPer100g! * factor : null,
+      fiberPer100g: fiberPer100g != null ? fiberPer100g! * factor : null,
+      saltPer100g: saltPer100g != null ? saltPer100g! * factor : null,
+    );
+  }
+}
+
 class Ingredient {
   final String id;
   final String name;
@@ -5,6 +62,7 @@ class Ingredient {
   final String? category;
   final String? imageUrl;
   final String? nutriScore;
+  final IngredientNutrients? nutrients;
 
   const Ingredient({
     required this.id,
@@ -13,6 +71,7 @@ class Ingredient {
     this.category,
     this.imageUrl,
     this.nutriScore,
+    this.nutrients,
   });
 
   factory Ingredient.fromJson(Map<String, dynamic> json) => Ingredient(
@@ -22,6 +81,10 @@ class Ingredient {
         category: json['category'] as String?,
         imageUrl: json['image_url'] as String?,
         nutriScore: json['nutri_score'] as String?,
+        nutrients: json['nutrients'] != null
+            ? IngredientNutrients.fromJson(
+                json['nutrients'] as Map<String, dynamic>)
+            : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -31,6 +94,7 @@ class Ingredient {
         'category': category,
         'image_url': imageUrl,
         'nutri_score': nutriScore,
+        'nutrients': nutrients?.toJson(),
       };
 }
 
@@ -51,6 +115,8 @@ class InventoryItem {
   final String? householdId;
   final DateTime createdAt;
   final DateTime? openedAt; // neu: Geöffnet-Datum
+  /// Nährwerte pro 100g – nur bei gescannten Produkten vorhanden
+  final IngredientNutrients? nutrientInfo;
 
   const InventoryItem({
     required this.id,
@@ -69,6 +135,7 @@ class InventoryItem {
     this.householdId,
     required this.createdAt,
     this.openedAt,
+    this.nutrientInfo,
   });
 
   /// Ist dieses Item ein Haushalt-Item?
@@ -99,6 +166,10 @@ class InventoryItem {
         openedAt: json['opened_at'] != null
             ? DateTime.parse(json['opened_at'] as String)
             : null,
+        nutrientInfo: json['nutrient_info'] != null
+            ? IngredientNutrients.fromJson(
+                json['nutrient_info'] as Map<String, dynamic>)
+            : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -118,6 +189,7 @@ class InventoryItem {
         'household_id': householdId,
         'created_at': createdAt.toIso8601String(),
         'opened_at': openedAt?.toIso8601String(),
+        if (nutrientInfo != null) 'nutrient_info': nutrientInfo!.toJson(),
       };
 
   InventoryItem copyWith({
@@ -137,6 +209,7 @@ class InventoryItem {
     Object? householdId = _unset,
     DateTime? createdAt,
     Object? openedAt = _unset,
+    Object? nutrientInfo = _unset,
   }) =>
       InventoryItem(
         id: id ?? this.id,
@@ -157,6 +230,9 @@ class InventoryItem {
             : householdId as String?,
         createdAt: createdAt ?? this.createdAt,
         openedAt: openedAt == _unset ? this.openedAt : openedAt as DateTime?,
+        nutrientInfo: nutrientInfo == _unset
+            ? this.nutrientInfo
+            : nutrientInfo as IngredientNutrients?,
       );
 }
 

@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import 'package:kokomu/core/services/supabase_service.dart';
 import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/models/inventory_item.dart';
 import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
 import 'package:kokomu/features/recipes/presentation/recipe_rating_provider.dart';
 import 'package:kokomu/features/recipes/presentation/recipe_notes_provider.dart';
@@ -19,6 +20,7 @@ import 'package:kokomu/features/community/presentation/community_provider.dart';
 import 'package:kokomu/features/community/presentation/publish_recipe_sheet.dart';
 import 'package:kokomu/models/community_recipe.dart';
 import 'package:kokomu/core/constants/staple_ingredients.dart';
+import 'package:kokomu/core/data/nutrient_data.dart';
 import 'package:kokomu/features/recipes/presentation/recipe_category_provider.dart';
 import 'package:kokomu/widgets/tag_picker_sheet.dart';
 
@@ -94,6 +96,131 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
         ? scaled.toInt().toString()
         : scaled.toStringAsFixed(1);
     return '$display${unit.isNotEmpty ? ' $unit' : ''}'.trim();
+  }
+
+  /// Versucht Nährwerte aus dem Inventar + Katalog-Fallback für die Zutaten des Rezepts zu berechnen.
+  /// Gibt null zurück wenn zu wenige Daten vorhanden.
+  ({IngredientNutrients nutrients, int matched, int total})? _computeNutrientsFromInventory(
+    List<RecipeIngredient> ingredients,
+    List<InventoryItem> inventory,
+    int servings,
+  ) {
+    double totalKcal = 0;
+    double totalProtein = 0;
+    double totalFat = 0;
+    double totalCarbs = 0;
+    double totalFiber = 0;
+    int matchCount = 0;
+
+    final inventoryByName = <String, InventoryItem>{};
+    for (final item in inventory) {
+      inventoryByName[item.ingredientName.toLowerCase()] = item;
+    }
+
+    for (final ing in ingredients) {
+      // 1. Prüfe Inventar (gescannte Produkte haben echte Nährwerte)
+      IngredientNutrients? nutrients;
+      final inventoryItem = inventoryByName[ing.name.toLowerCase()];
+      if (inventoryItem?.nutrientInfo != null) {
+        nutrients = inventoryItem!.nutrientInfo!;
+      }
+
+      // 2. Fallback: Katalog-Nährwerte
+      nutrients ??= getNutrientsForIngredientName(ing.name);
+
+      if (nutrients == null || !nutrients.hasData) continue;
+
+      // Versuche Gramm-Menge aus dem Betrag zu extrahieren
+      final amountMatch = RegExp(r'^([\d.,]+)\s*(g|kg|ml|l)?', caseSensitive: false)
+          .firstMatch(ing.amount.trim());
+      double grams = 100; // default: 100g wenn nicht parsebar
+      if (amountMatch != null) {
+        final num = double.tryParse(amountMatch.group(1)!.replaceAll(',', '.')) ?? 100;
+        final unit = amountMatch.group(2)?.toLowerCase() ?? 'g';
+        grams = unit == 'kg' ? num * 1000 : (unit == 'l' ? num * 1000 : num);
+      }
+
+      final factor = grams / 100.0;
+      if (nutrients.kcalPer100g != null) totalKcal += nutrients.kcalPer100g! * factor;
+      if (nutrients.proteinPer100g != null) totalProtein += nutrients.proteinPer100g! * factor;
+      if (nutrients.fatPer100g != null) totalFat += nutrients.fatPer100g! * factor;
+      if (nutrients.carbsPer100g != null) totalCarbs += nutrients.carbsPer100g! * factor;
+      if (nutrients.fiberPer100g != null) totalFiber += nutrients.fiberPer100g! * factor;
+      matchCount++;
+    }
+
+    // Nur anzeigen wenn mindestens 30% der Zutaten Nährwerte haben
+    if (matchCount < (ingredients.length * 0.3).ceil() || matchCount == 0) return null;
+
+    final portions = servings > 0 ? servings : 1;
+    return (
+      nutrients: IngredientNutrients(
+        kcalPer100g: totalKcal / portions,
+        proteinPer100g: totalProtein / portions,
+        fatPer100g: totalFat / portions,
+        carbsPer100g: totalCarbs / portions,
+        fiberPer100g: totalFiber / portions,
+      ),
+      matched: matchCount,
+      total: ingredients.length,
+    );
+  }
+
+  /// Baut die Nährwert-Anzeige-Zeile.
+  Widget _buildNutritionRow({
+    required BuildContext context,
+    required ThemeData theme,
+    required double kcal,
+    required double protein,
+    required double carbs,
+    required double fat,
+    required double fiber,
+    required bool isEstimated,
+    int? matchedCount,
+    int? totalCount,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Icon(Icons.bar_chart_rounded, size: 18, color: theme.colorScheme.primary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                isEstimated ? 'Nährwerte ca. pro Portion' : 'Nährwerte pro Portion',
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _NutrientValue(value: kcal.toInt().toString(), unit: 'kcal', label: 'Kalorien', color: Colors.orange),
+            _NutrientValue(value: protein.toInt().toString(), unit: 'g', label: 'Protein', color: Colors.purple),
+            _NutrientValue(value: carbs.toInt().toString(), unit: 'g', label: 'Carbs', color: Colors.blue),
+            _NutrientValue(value: fat.toInt().toString(), unit: 'g', label: 'Fett', color: Colors.amber),
+            if (fiber > 0)
+              _NutrientValue(value: fiber.toInt().toString(), unit: 'g', label: 'Ballast.', color: Colors.brown),
+          ],
+        ),
+        if (isEstimated) ...[
+          const SizedBox(height: 6),
+          Text(
+            matchedCount != null && totalCount != null
+                ? '~Schätzwert (basierend auf $matchedCount/$totalCount Zutaten)'
+                : '~Schätzwert basierend auf gescannten Zutaten im Vorrat',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   Future<void> _pickAndUploadImage() async {
@@ -449,28 +576,46 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                         ),
                       ],
                     ),
-                    // ─── Nährwerte (nur wenn vorhanden, ohne Hintergrund) ───
-                    if (recipe.nutrition != null && recipe.nutrition!.calories > 0) ...[
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Icon(Icons.bar_chart_rounded, size: 18, color: theme.colorScheme.primary),
-                          const SizedBox(width: 6),
-                          Text('Nährwerte pro Portion', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _NutrientValue(value: '${recipe.nutrition!.calories}', unit: 'kcal', label: 'Kalorien', color: Colors.orange),
-                          _NutrientValue(value: '${recipe.nutrition!.protein.toInt()}', unit: 'g', label: 'Protein', color: Colors.purple),
-                          _NutrientValue(value: '${recipe.nutrition!.carbs.toInt()}', unit: 'g', label: 'Carbs', color: Colors.blue),
-                          _NutrientValue(value: '${recipe.nutrition!.fat.toInt()}', unit: 'g', label: 'Fett', color: Colors.amber),
-                          _NutrientValue(value: '${recipe.nutrition!.fiber.toInt()}', unit: 'g', label: 'Ballast.', color: Colors.brown),
-                        ],
-                      ),
-                    ],
+                    // ─── Nährwerte (direkt oder aus Inventar berechnet) ───
+                    Consumer(
+                      builder: (context, ref, _) {
+                        // 1. Bevorzuge direkte Nährwerte vom Rezept (AI-generiert)
+                        if (recipe.nutrition != null && recipe.nutrition!.calories > 0) {
+                          return _buildNutritionRow(
+                            context: context,
+                            theme: theme,
+                            kcal: recipe.nutrition!.calories.toDouble(),
+                            protein: recipe.nutrition!.protein,
+                            carbs: recipe.nutrition!.carbs,
+                            fat: recipe.nutrition!.fat,
+                            fiber: recipe.nutrition!.fiber,
+                            isEstimated: false,
+                          );
+                        }
+                        // 2. Versuche Nährwerte aus Inventar + Katalog zu berechnen
+                        final inventory = ref.watch(inventoryProvider).valueOrNull ?? [];
+                        final result = _computeNutrientsFromInventory(
+                          recipe.ingredients,
+                          inventory,
+                          _servings,
+                        );
+                        if (result != null) {
+                          return _buildNutritionRow(
+                            context: context,
+                            theme: theme,
+                            kcal: result.nutrients.kcalPer100g ?? 0,
+                            protein: result.nutrients.proteinPer100g ?? 0,
+                            carbs: result.nutrients.carbsPer100g ?? 0,
+                            fat: result.nutrients.fatPer100g ?? 0,
+                            fiber: result.nutrients.fiberPer100g ?? 0,
+                            isEstimated: true,
+                            matchedCount: result.matched,
+                            totalCount: result.total,
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
                     const SizedBox(height: 24),
                     // ─── Zutaten ───
                     Row(

@@ -13,6 +13,14 @@ import 'package:kokomu/models/inventory_item.dart';
 import 'package:kokomu/widgets/nutri_score_badge.dart';
 import 'package:kokomu/widgets/main_shell.dart' show AppBarMoreButton;
 
+const _kScannerUnits = [
+  'g', 'kg', 'ml', 'L', 'cl',
+  'EL', 'TL', 'Tasse',
+  'Stück', 'Packung', 'Pkg.', 'Dose', 'Glas',
+  'Scheibe', 'Scheiben', 'Bund',
+  'Prise', 'Schuss', 'nach Geschmack',
+];
+
 class ScannerScreen extends ConsumerStatefulWidget {
   const ScannerScreen({super.key});
 
@@ -331,7 +339,7 @@ class _ScanResultSheet extends ConsumerStatefulWidget {
 
 class _ScanResultSheetState extends ConsumerState<_ScanResultSheet> {
   final _quantityController = TextEditingController();
-  final _unitController = TextEditingController(text: 'Stück');
+  String _selectedUnit = 'Stück';
   DateTime? _expiryDate;
   bool _isLoading = false;
   bool _isHousehold = false;
@@ -350,7 +358,6 @@ class _ScanResultSheetState extends ConsumerState<_ScanResultSheet> {
   @override
   void dispose() {
     _quantityController.dispose();
-    _unitController.dispose();
     super.dispose();
   }
 
@@ -378,9 +385,10 @@ class _ScanResultSheetState extends ConsumerState<_ScanResultSheet> {
       ingredientCategory: widget.ingredient.category,
       ingredientImageUrl: widget.ingredient.imageUrl,
       quantity: double.tryParse(_quantityController.text),
-      unit: _unitController.text.trim().isEmpty ? null : _unitController.text.trim(),
+      unit: _selectedUnit == 'nach Geschmack' ? null : _selectedUnit,
       expiryDate: _expiryDate,
       nutriScore: widget.ingredient.nutriScore,
+      nutrientInfo: widget.ingredient.nutrients,
       householdId: householdId,
       createdAt: DateTime.now(),
     );
@@ -401,7 +409,7 @@ class _ScanResultSheetState extends ConsumerState<_ScanResultSheet> {
 
   Future<void> _addToShoppingList() async {
     final qty = _quantityController.text.trim();
-    final unit = _unitController.text.trim();
+    final unit = _selectedUnit == 'nach Geschmack' ? '' : _selectedUnit;
     final quantity = qty.isNotEmpty ? '$qty $unit'.trim() : null;
     await ref.read(shoppingListProvider.notifier).addItem(
           widget.ingredient.name,
@@ -504,15 +512,19 @@ class _ScanResultSheetState extends ConsumerState<_ScanResultSheet> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: TextField(
-                  controller: _unitController,
-                  decoration: const InputDecoration(
-                    labelText: 'Einheit',
-                  ),
+                child: _ScannerUnitDropdown(
+                  value: _selectedUnit,
+                  onChanged: (u) => setState(() => _selectedUnit = u),
                 ),
               ),
             ],
           ),
+          // ── Nährwerte anzeigen wenn vorhanden ──
+          if (widget.ingredient.nutrients != null &&
+              widget.ingredient.nutrients!.hasData) ...[
+            const SizedBox(height: 16),
+            _ScanNutrientRow(nutrients: widget.ingredient.nutrients!),
+          ],
           const SizedBox(height: 12),
           // ── Haushalt / Privat Toggle ──
           Consumer(builder: (context, ref, _) {
@@ -853,3 +865,132 @@ class _ScanHistoryTab extends ConsumerWidget {
     return '${date.day}.${date.month}.${date.year}';
   }
 }
+
+// ── Einheiten-Dropdown für Scanner ───────────────────────────────────────────
+class _ScannerUnitDropdown extends StatelessWidget {
+  final String value;
+  final ValueChanged<String> onChanged;
+  const _ScannerUnitDropdown({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final units = _kScannerUnits.contains(value)
+        ? _kScannerUnits
+        : [value, ..._kScannerUnits];
+    return DropdownButtonFormField<String>(
+      value: units.contains(value) ? value : units.first,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Einheit',
+        prefixIcon: Icon(Icons.straighten, size: 18),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      ),
+      items: units
+          .map((u) => DropdownMenuItem(
+                value: u,
+                child: Text(u,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium),
+              ))
+          .toList(),
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
+    );
+  }
+}
+
+// ── Nährwert-Zeile im Scan-Sheet ──────────────────────────────────────────────
+class _ScanNutrientRow extends StatelessWidget {
+  final IngredientNutrients nutrients;
+  const _ScanNutrientRow({required this.nutrients});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Nährwerte pro 100g',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              if (nutrients.kcalPer100g != null)
+                _NutrientChip(
+                  label: 'Kcal',
+                  value: nutrients.kcalPer100g!.toInt().toString(),
+                  color: Colors.orange,
+                ),
+              if (nutrients.proteinPer100g != null)
+                _NutrientChip(
+                  label: 'Protein',
+                  value: '${nutrients.proteinPer100g!.toStringAsFixed(1)}g',
+                  color: Colors.purple,
+                ),
+              if (nutrients.carbsPer100g != null)
+                _NutrientChip(
+                  label: 'Carbs',
+                  value: '${nutrients.carbsPer100g!.toStringAsFixed(1)}g',
+                  color: Colors.blue,
+                ),
+              if (nutrients.fatPer100g != null)
+                _NutrientChip(
+                  label: 'Fett',
+                  value: '${nutrients.fatPer100g!.toStringAsFixed(1)}g',
+                  color: Colors.amber,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NutrientChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _NutrientChip({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
