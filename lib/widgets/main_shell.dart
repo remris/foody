@@ -241,12 +241,16 @@ class AppBarMoreButton extends ConsumerWidget {
       offset: const Offset(0, 48),
       onSelected: (action) {
         switch (action) {
+          case _MoreAction.profile:
+            context.push('/profile');
+          case _MoreAction.household:
+            context.push('/settings/household');
+          case _MoreAction.communities:
+            context.push('/communities');
           case _MoreAction.mealPlan:
             context.push('/kitchen/meal-plan');
           case _MoreAction.nutrition:
             context.push('/settings/nutrition');
-          case _MoreAction.household:
-            context.push('/settings/household');
           case _MoreAction.settings:
             context.push('/settings');
           case _MoreAction.paywall:
@@ -335,6 +339,24 @@ class AppBarMoreButton extends ConsumerWidget {
           ),
         ),
         const PopupMenuDivider(),
+        // ── Haushalt & Community ──
+        const PopupMenuItem(
+          value: _MoreAction.household,
+          child: ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.home_outlined),
+              title: Text('Mein Haushalt')),
+        ),
+        const PopupMenuItem(
+          value: _MoreAction.communities,
+          child: ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.groups_outlined),
+              title: Text('Meine Communities')),
+        ),
+        const PopupMenuDivider(),
         // ── Planung ──
         const PopupMenuItem(
           value: _MoreAction.mealPlan,
@@ -354,14 +376,6 @@ class AppBarMoreButton extends ConsumerWidget {
         ),
         const PopupMenuDivider(),
         // ── Konto ──
-        const PopupMenuItem(
-          value: _MoreAction.household,
-          child: ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.home_outlined),
-              title: Text('Mein Haushalt')),
-        ),
         const PopupMenuItem(
           value: _MoreAction.settings,
           child: ListTile(
@@ -416,4 +430,4 @@ class AppBarMoreButton extends ConsumerWidget {
   }
 }
 
-enum _MoreAction { mealPlan, nutrition, household, settings, paywall }
+enum _MoreAction { profile, mealPlan, nutrition, household, communities, settings, paywall }

@@ -12,6 +12,9 @@ import 'package:kokomu/features/community/presentation/community_meal_plan_detai
 import 'package:kokomu/features/community/presentation/publish_meal_plan_sheet.dart';
 import 'package:kokomu/features/meal_plan/presentation/new_meal_plan_screen.dart';
 import 'package:kokomu/features/profile/presentation/profile_provider.dart';
+import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_detail_screen.dart';
+import 'package:kokomu/models/recipe.dart';
 import 'package:kokomu/models/community_meal_plan.dart';
 import 'package:kokomu/models/community_recipe.dart';
 import 'package:kokomu/models/user_profile.dart';
@@ -62,11 +65,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         : fallbackName;
     final initials = displayName.substring(0, 1).toUpperCase();
 
+    final hasBio = profile?.bio.isNotEmpty == true;
+    final hasSocialLinks = profile != null && !profile.socialLinks.isEmpty;
+    // Basis: 220px Header + ggf. Bio (~36px) + ggf. SocialLinks (~32px)
+    final expandedHeight = 220.0
+        + (hasBio ? 36.0 : 0.0)
+        + (hasSocialLinks ? 32.0 : 0.0)
+        + (profile != null ? 52.0 : 0.0); // Stats-Row
+
     return Scaffold(
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
-            expandedHeight: 290,
+            expandedHeight: expandedHeight,
             floating: false,
             pinned: true,
             snap: false,
@@ -83,18 +94,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 onPressed: () => context.push('/profile/edit'),
               ),
               IconButton(
-                icon: const Icon(Icons.person_outline_rounded),
-                tooltip: 'Mein Profil ansehen',
+                icon: const Icon(Icons.settings_outlined),
+                tooltip: 'Meine Einstellungen',
                 onPressed: () {
                   final uid = ref.read(currentUserProvider)?.id;
-                  if (uid != null) context.push('/profile/$uid');
+                  if (uid != null) context.push('/settings');
                 },
               ),
               IconButton(
-                icon: const Icon(Icons.settings_outlined),
-                tooltip: 'Einstellungen',
-                onPressed: () => context.push('/settings'),
+                icon: const Icon(Icons.home_outlined),
+                tooltip: 'Mein Haushalt',
+                onPressed: () => context.push('/settings/household'),
               ),
+              IconButton(
+                icon: const Icon(Icons.groups_outlined),
+                tooltip: 'Meine Communities',
+                onPressed: () => context.push('/communities'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.calendar_month_outlined),
+                tooltip: 'Wochenplaner',
+                onPressed: () => context.push('/kitchen/meal-plan'),
+              ),
+              const AppBarMoreButton(),
             ],
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.pin,
@@ -102,13 +124,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 bottom: false,
                 child: Container(
                   color: theme.colorScheme.surfaceContainerLow,
-                  // top: Platz für AppBar (~56) + StatusBar (~24) = 80
-                  // bottom: Platz für TabBar (~48) + etwas Luft
-                  padding: const EdgeInsets.fromLTRB(20, 80, 20, 60),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                  padding: const EdgeInsets.fromLTRB(20, 80, 20, 8),
+                  child: SingleChildScrollView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -188,24 +210,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            _StatChip(label: 'Rezepte', value: profile.recipeCount),
+                            Expanded(child: _StatChip(label: 'Rezepte', value: profile.recipeCount, fullWidth: true)),
                             const SizedBox(width: 6),
-                            _StatChip(
-                              label: 'Follower',
-                              value: profile.followerCount,
-                              onTap: () => context.push('/profile/${profile.id}/followers'),
-                            ),
+                            Expanded(child: _StatChip(label: 'Follower', value: profile.followerCount, fullWidth: true, onTap: () => context.push('/profile/${profile.id}/followers'))),
                             const SizedBox(width: 6),
-                            _StatChip(
-                              label: 'Folgt',
-                              value: profile.followingCount,
-                              onTap: () => context.push('/profile/${profile.id}/following'),
-                            ),
+                            Expanded(child: _StatChip(label: 'Folgt', value: profile.followingCount, fullWidth: true, onTap: () => context.push('/profile/${profile.id}/following'))),
                           ],
                         ),
                       ],
                     ],
-                  ),
+                  ),      // Column
+                  ),      // SingleChildScrollView
                 ),
               ),
             ),
@@ -375,6 +390,24 @@ class _MyPublishedRecipeDetail extends ConsumerWidget {
     if (err == null) Navigator.pop(context);
   }
 
+  void _openRecipeDetail(BuildContext context, WidgetRef ref, {bool autoEdit = false}) {
+    // Versuche das gespeicherte FoodRecipe zu finden, sonst aus recipeJson rekonstruieren
+    final saved = ref.read(savedRecipesProvider).valueOrNull ?? [];
+    FoodRecipe? match;
+    for (final r in saved) {
+      if (r.title == recipe.title) { match = r; break; }
+    }
+    final foodRecipe = match ?? recipe.toFoodRecipe();
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => RecipeDetailScreen(
+        recipe: foodRecipe,
+        isAiRecipe: recipe.source == 'ai',
+        isFromCommunity: false,
+        autoOpenEdit: autoEdit,
+      ),
+    ));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -384,7 +417,11 @@ class _MyPublishedRecipeDetail extends ConsumerWidget {
       appBar: AppBar(
         title: Text(recipe.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
-          // Bearbeiten öffnet den Community-Detail-Screen im "eigener"-Modus
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Rezept bearbeiten',
+            onPressed: () => _openRecipeDetail(context, ref, autoEdit: true),
+          ),
           IconButton(
             icon: const Icon(Icons.visibility_outlined),
             tooltip: 'Als Community-User ansehen',
@@ -474,10 +511,9 @@ class _MyPublishedRecipeDetail extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(
-                            builder: (_) => CommunityRecipeDetailScreen(recipe: recipe))),
-                          icon: const Icon(Icons.visibility_outlined, size: 18),
-                          label: const Text('Ansehen'),
+                          onPressed: () => _openRecipeDetail(context, ref, autoEdit: true),
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: const Text('Bearbeiten'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1283,13 +1319,15 @@ class _StatChip extends StatelessWidget {
   final String label;
   final int value;
   final VoidCallback? onTap;
-  const _StatChip({required this.label, required this.value, this.onTap});
+  // fullWidth-Parameter wird behalten aber nicht mehr intern zu Expanded
+  const _StatChip({required this.label, required this.value, this.onTap, bool fullWidth = false});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final child = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    final inner = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(12),
@@ -1302,10 +1340,8 @@ class _StatChip extends StatelessWidget {
         Text(label, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
       ]),
     );
-    if (onTap != null) {
-      return GestureDetector(onTap: onTap, child: child);
-    }
-    return child;
+    if (onTap != null) return GestureDetector(onTap: onTap, child: inner);
+    return inner;
   }
 }
 

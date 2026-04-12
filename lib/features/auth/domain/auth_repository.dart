@@ -11,6 +11,8 @@ abstract class AuthRepository {
   Future<AuthResponse> signIn({required String email, required String password});
   Future<void> signOut();
   Future<void> resetPassword(String email);
+  Future<void> updatePassword(String newPassword);
+  Future<void> exchangeCodeForSession(String code);
   User? getCurrentUser();
   Stream<AuthState> get authStateChanges;
 }

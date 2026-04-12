@@ -218,8 +218,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   TextFormField(
                     controller: _nameCtrl,
                     decoration: const InputDecoration(
-                      labelText: 'Anzeigename (Community)',
-                      hintText: 'Wird öffentlich angezeigt',
+                      labelText: 'Anzeigename',
+                      hintText: 'Wird öffentlich in der Community angezeigt',
                       prefixIcon: Icon(Icons.person_outline),
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty)
@@ -230,9 +230,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   TextFormField(
                     controller: _householdNicknameCtrl,
                     decoration: const InputDecoration(
-                      labelText: 'Haushalts-Spitzname (optional)',
-                      hintText: 'z.B. Papa, Mama, Roomie – nur für deinen Haushalt sichtbar',
-                      prefixIcon: Icon(Icons.home_outlined),
+                      labelText: 'Spitzname (Haushalt & Community)',
+                      hintText: 'z.B. Papa, Mama, Roomie – in Haushalt & Community sichtbar',
+                      prefixIcon: Icon(Icons.badge_outlined),
                     ),
                     maxLength: 30,
                   ),

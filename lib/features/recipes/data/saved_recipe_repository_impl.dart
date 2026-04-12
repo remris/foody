@@ -26,18 +26,18 @@ class SavedRecipeRepositoryImpl implements SavedRecipeRepository {
   }
 
   @override
-  Future<void> saveRecipe(String userId, FoodRecipe recipe, {String source = 'ai'}) async {
-    await _client.from(AppConstants.tableSavedRecipes).insert({
+  Future<String?> saveRecipe(String userId, FoodRecipe recipe, {String source = 'ai'}) async {
+    final result = await _client.from(AppConstants.tableSavedRecipes).insert({
       'user_id': userId,
       'title': recipe.title,
       'recipe_json': recipe.copyWith(source: source).toJson(),
       'source': source,
-      // Denormalisierte Felder für Index-Nutzung
       'cooking_time_minutes': recipe.cookingTimeMinutes,
       'difficulty': recipe.difficulty,
       'calories': recipe.nutrition?.calories,
       'tags': _extractTags(recipe),
-    });
+    }).select('id').single();
+    return result['id']?.toString();
   }
 
   @override

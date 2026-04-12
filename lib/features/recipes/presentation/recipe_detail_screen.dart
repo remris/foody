@@ -19,6 +19,8 @@ import 'package:kokomu/features/community/presentation/community_provider.dart';
 import 'package:kokomu/features/community/presentation/publish_recipe_sheet.dart';
 import 'package:kokomu/models/community_recipe.dart';
 import 'package:kokomu/core/constants/staple_ingredients.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_category_provider.dart';
+import 'package:kokomu/widgets/tag_picker_sheet.dart';
 
 class RecipeDetailScreen extends ConsumerStatefulWidget {
   final FoodRecipe recipe;
@@ -26,11 +28,14 @@ class RecipeDetailScreen extends ConsumerStatefulWidget {
   final bool isAiRecipe;
   /// true wenn dieses Rezept aus der Community gespeichert wurde (fremdes Rezept)
   final bool isFromCommunity;
+  /// Wenn true: öffnet automatisch den Edit-Sheet beim Laden
+  final bool autoOpenEdit;
   const RecipeDetailScreen({
     super.key,
     required this.recipe,
     this.isAiRecipe = false,
     this.isFromCommunity = false,
+    this.autoOpenEdit = false,
   });
 
   @override
@@ -50,6 +55,11 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
     _servings = widget.recipe.servings;
     _multiplier = 1.0;
     _localImageUrl = widget.recipe.imageUrl;
+    if (widget.autoOpenEdit) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showEditRecipeSheet(context, widget.recipe);
+      });
+    }
   }
 
   void _updateServings(int newServings) {
@@ -305,6 +315,71 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                         const SizedBox(width: 4),
                         Text('$_servings Portionen', style: theme.textTheme.bodySmall),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    // ─── Kategorie-Badge ───
+                    Consumer(
+                      builder: (context, ref, _) {
+                        ref.watch(recipeCategoryProvider); // rebuild on change
+                        final notifier = ref.read(recipeCategoryProvider.notifier);
+                        final key = recipe.savedRecipeId ?? recipe.id;
+                        final cats = notifier.getCategories(key);
+                        // Fallback: recipe.category String
+                        final fallbackCat = cats.isEmpty && recipe.category != null
+                            ? RecipeMealType.values
+                                .where((m) => m.label == recipe.category)
+                                .firstOrNull
+                            : null;
+                        final isOwn = recipe.source == 'own';
+                        if (cats.isEmpty && fallbackCat == null && !isOwn) {
+                          return const SizedBox.shrink();
+                        }
+                        final displayCats = cats.isNotEmpty ? cats : (fallbackCat != null ? {fallbackCat} : <RecipeMealType>{});
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              // Kategorie-Chips (alle)
+                              for (final cat in displayCats)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.secondaryContainer,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '${cat.emoji} ${cat.label}',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: theme.colorScheme.onSecondaryContainer,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              // Quelle
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isOwn
+                                      ? theme.colorScheme.primaryContainer
+                                      : theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  isOwn ? '👤 Eigenes Rezept' : '🌐 Community',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: isOwn
+                                        ? theme.colorScheme.onPrimaryContainer
+                                        : theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 12),
                     // ─── Rating ───
@@ -1192,15 +1267,15 @@ class _RecipeNotesState extends ConsumerState<_RecipeNotes> {
 
 // ─── Edit Recipe Sheet ───────────────────────────────────────────────────────
 
-class _EditRecipeSheet extends StatefulWidget {
+class _EditRecipeSheet extends ConsumerStatefulWidget {
   final FoodRecipe recipe;
   const _EditRecipeSheet({required this.recipe});
 
   @override
-  State<_EditRecipeSheet> createState() => _EditRecipeSheetState();
+  ConsumerState<_EditRecipeSheet> createState() => _EditRecipeSheetState();
 }
 
-class _EditRecipeSheetState extends State<_EditRecipeSheet> {
+class _EditRecipeSheetState extends ConsumerState<_EditRecipeSheet> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _descCtrl;
   late final TextEditingController _cookTimeCtrl;
@@ -1209,6 +1284,7 @@ class _EditRecipeSheetState extends State<_EditRecipeSheet> {
   late List<RecipeIngredient> _ingredients;
   late List<String> _steps;
   late List<String> _tags;
+  final Set<RecipeMealType> _categories = {}; // Mehrfachauswahl
 
   static const _difficulties = ['Einfach', 'Mittel', 'Schwer'];
 
@@ -1231,6 +1307,20 @@ class _EditRecipeSheetState extends State<_EditRecipeSheet> {
     _ingredients = List.from(r.ingredients);
     _steps = List.from(r.steps);
     _tags = List.from(r.tags);
+    // Kategorien aus Provider laden (inkl. Mehrfach)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final id = r.savedRecipeId;
+      if (id != null) {
+        final cats = ref.read(recipeCategoryProvider.notifier).getCategories(id);
+        if (cats.isNotEmpty) setState(() { _categories.clear(); _categories.addAll(cats); });
+        // Auch recipe.category String-Fallback
+        else if (r.category != null && r.category!.isNotEmpty) {
+          final t = RecipeMealType.values.where((m) => m.label == r.category).firstOrNull;
+          if (t != null) setState(() => _categories.add(t));
+        }
+      }
+    });
   }
 
   @override
@@ -1253,6 +1343,11 @@ class _EditRecipeSheetState extends State<_EditRecipeSheet> {
       steps: _steps,
       tags: _tags,
     );
+    // Kategorien speichern
+    final id = updated.savedRecipeId;
+    if (id != null) {
+      ref.read(recipeCategoryProvider.notifier).setCategories(id, _categories.toList());
+    }
     Navigator.pop(context, updated);
   }
 
@@ -1372,6 +1467,56 @@ class _EditRecipeSheetState extends State<_EditRecipeSheet> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                // Kategorie
+                Row(
+                  children: [
+                    Text('Kategorie', style: theme.textTheme.labelLarge),
+                    const SizedBox(width: 4),
+                    Text('*', style: TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.bold)),
+                    const Spacer(),
+                    Text('Mehrere möglich', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 36,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (final type in [
+                        RecipeMealType.breakfast,
+                        RecipeMealType.lunch,
+                        RecipeMealType.dinner,
+                        RecipeMealType.snack,
+                      ])
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: Text(type.label, style: const TextStyle(fontSize: 12)),
+                            selected: _categories.contains(type),
+                            onSelected: (_) => setState(() {
+                              if (_categories.contains(type)) {
+                                _categories.remove(type);
+                              } else {
+                                _categories.add(type);
+                              }
+                            }),
+                            visualDensity: VisualDensity.compact,
+                            showCheckmark: true,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (_categories.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Mindestens eine Kategorie auswählen',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+                    ),
+                  ),
                 const Divider(height: 24),
                 // Zutaten
                 Row(
@@ -1485,16 +1630,10 @@ class _EditRecipeSheetState extends State<_EditRecipeSheet> {
                     const Spacer(),
                     TextButton.icon(
                       onPressed: () async {
-                        final selected = await showModalBottomSheet<List<String>>(
-                          context: context,
-                          isScrollControlled: true,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                          ),
-                          builder: (_) => _EditTagPickerSheet(
-                            selected: List.from(_tags),
-                            suggestions: _kSuggestedTags,
-                          ),
+                        final selected = await TagPickerSheet.show(
+                          context,
+                          selected: _tags,
+                          suggestions: _kSuggestedTags,
                         );
                         if (selected != null) setState(() { _tags.clear(); _tags.addAll(selected); });
                       },
@@ -1528,118 +1667,3 @@ class _EditRecipeSheetState extends State<_EditRecipeSheet> {
   }
 }
 
-// ─── Tag-Auswahl für EditRecipeSheet ─────────────────────────────────────────
-
-class _EditTagPickerSheet extends StatefulWidget {
-  final List<String> selected;
-  final List<String> suggestions;
-  const _EditTagPickerSheet({required this.selected, required this.suggestions});
-  @override
-  State<_EditTagPickerSheet> createState() => _EditTagPickerSheetState();
-}
-
-class _EditTagPickerSheetState extends State<_EditTagPickerSheet> {
-  late final List<String> _selected;
-  final _customCtrl = TextEditingController();
-
-  @override
-  void initState() { super.initState(); _selected = List.from(widget.selected); }
-
-  @override
-  void dispose() { _customCtrl.dispose(); super.dispose(); }
-
-  void _addCustom() {
-    final t = _customCtrl.text.trim();
-    if (t.isNotEmpty && !_selected.contains(t)) {
-      setState(() => _selected.add(t));
-      _customCtrl.clear();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      maxChildSize: 0.92,
-      minChildSize: 0.4,
-      expand: false,
-      builder: (ctx, scrollCtrl) => Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 8, 10),
-            child: Row(
-              children: [
-                Expanded(child: Text('Tags auswählen',
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))),
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
-                const SizedBox(width: 4),
-                FilledButton(onPressed: () => Navigator.pop(context, _selected), child: const Text('Fertig')),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: TextField(
-              controller: _customCtrl,
-              decoration: InputDecoration(
-                hintText: 'Eigenen Tag eingeben…',
-                isDense: true,
-                prefixIcon: const Icon(Icons.edit_outlined, size: 18),
-                suffixIcon: IconButton(icon: const Icon(Icons.add_circle_rounded, size: 20), onPressed: _addCustom),
-              ),
-              textCapitalization: TextCapitalization.words,
-              onSubmitted: (_) => _addCustom(),
-            ),
-          ),
-          if (_selected.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Align(alignment: Alignment.centerLeft,
-                  child: Text('Ausgewählt', style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.primary, fontWeight: FontWeight.w700))),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
-              child: Wrap(
-                spacing: 6, runSpacing: 4,
-                children: _selected.map((t) => InputChip(
-                  label: Text(t, style: const TextStyle(fontSize: 12)),
-                  deleteIcon: const Icon(Icons.close, size: 14),
-                  onDeleted: () => setState(() => _selected.remove(t)),
-                  selected: true, showCheckmark: false,
-                  visualDensity: VisualDensity.compact,
-                )).toList(),
-              ),
-            ),
-            const Divider(indent: 16, endIndent: 16),
-          ],
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-            child: Align(alignment: Alignment.centerLeft,
-                child: Text('Vorschläge', style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600))),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              controller: scrollCtrl,
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-              child: Wrap(
-                spacing: 6, runSpacing: 6,
-                children: widget.suggestions
-                    .where((t) => !_selected.contains(t))
-                    .map((t) => ActionChip(
-                          label: Text(t, style: const TextStyle(fontSize: 12)),
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => setState(() => _selected.add(t)),
-                        ))
-                    .toList(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

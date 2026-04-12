@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomu/core/constants/food_categories.dart';
+import 'package:kokomu/features/auth/presentation/auth_provider.dart';
 import 'package:kokomu/features/inventory/presentation/add_inventory_item_sheet.dart';
 import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
 import 'package:kokomu/features/scanner/data/scanner_repository_impl.dart';
 import 'package:kokomu/features/scanner/domain/scanner_repository.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
 import 'package:kokomu/models/inventory_item.dart';
 import 'package:kokomu/models/product_details.dart';
+import 'package:kokomu/models/shopping_list.dart';
+import 'package:kokomu/models/shopping_list_item.dart';
 
 final scannerRepoProvider = Provider<ScannerRepository>((ref) {
   return ScannerRepositoryImpl();
@@ -47,12 +51,22 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
       // Noch nicht geöffnet → Dialog mit %-Verbrauch
       final result = await _showOpenedDialog(context);
       if (result == null || !mounted) return;
-      final percent = result;
-      // Neue Menge berechnen (abzüglich verbrauchter %)
+
+      // 100 % Optionen
+      if (result == 'consumed' || result == 'reorder') {
+        if (result == 'reorder') {
+          await _doConsumeCompletely(reorder: true);
+        } else {
+          await _doConsumeCompletely(reorder: false);
+        }
+        return;
+      }
+
+      // confirm:<n>
+      final percent = double.tryParse(result.replaceFirst('confirm:', '')) ?? 0;
       double? newQty = _item.quantity;
       if (newQty != null && percent > 0) {
         newQty = newQty * (1 - percent / 100);
-        if (newQty < 0) newQty = 0;
       }
       final updated = _item.copyWith(
         openedAt: DateTime.now(),
@@ -63,15 +77,273 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
     }
   }
 
-  /// Zeigt Dialog: "Bereits wieviel % verbraucht?"
-  Future<double?> _showOpenedDialog(BuildContext context) async {
+  /// Intern: löscht Artikel und leitet ggf. zum Nachkauf-Sheet.
+  Future<void> _doConsumeCompletely({required bool reorder}) async {
+    final notifier = ref.read(inventoryProvider.notifier);
+    if (_item.minThreshold > 0) {
+      await notifier.updateItem(_item.copyWith(quantity: 0));
+    }
+    await notifier.deleteItem(_item.id);
+    if (!mounted) return;
+    if (reorder) {
+      await _showAddToShoppingListDialog();
+    }
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  /// Zeigt einen Bottom-Sheet zur Auswahl einer Einkaufsliste.
+  /// Fügt den Artikel direkt hinzu, wenn eine Liste gewählt wird.
+  Future<void> _showAddToShoppingListDialog() async {
+    final lists = ref.read(shoppingListsProvider).valueOrNull ?? [];
+    if (lists.isEmpty) return; // keine Listen vorhanden → überspringen
+
+    final userId = ref.read(currentUserProvider)?.id ?? '';
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20, right: 20, top: 16,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 12,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle
+                Center(
+                  child: Container(
+                    width: 36, height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(Icons.shopping_cart_outlined,
+                        color: theme.colorScheme.primary),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Auf Einkaufsliste?',
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            '"${_item.ingredientName}" zu einer Liste hinzufügen',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 4),
+                // Listen – scrollbar bei vielen Einträgen
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.4,
+                  ),
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: lists.map((list) {
+                      return ListTile(
+                        leading: Icon(
+                          list.householdId != null
+                              ? Icons.people_alt_outlined
+                              : Icons.checklist_rounded,
+                          color: theme.colorScheme.primary,
+                        ),
+                        title: Text(list.name),
+                        subtitle: list.householdId != null
+                            ? const Text('Haushaltsliste')
+                            : null,
+                        trailing: const Icon(Icons.add_circle_outline_rounded),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                        onTap: () async {
+                          Navigator.of(ctx).pop();
+                          final repo = ref.read(shoppingListRepositoryProvider);
+                          final newItem = ShoppingListItem(
+                            id: '',
+                            listId: list.id,
+                            userId: userId,
+                            name: _item.ingredientName,
+                            quantity: _item.unit,
+                            isChecked: false,
+                            createdAt: DateTime.now(),
+                          );
+                          try {
+                            await repo.addItem(newItem);
+                            ref.invalidate(shoppingListsProvider);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      '✅ "${_item.ingredientName}" zu "${list.name}" hinzugefügt'),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Fehler: $e')),
+                              );
+                            }
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Center(
+                  child: TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Überspringen'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _markConsumed() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (c) {
+        final theme = Theme.of(c);
+        return AlertDialog(
+          title: const Text('Vollständig verbraucht?'),
+          content: Text('"${_item.ingredientName}" aus dem Vorrat entfernen?'),
+          actions: [
+            // Full-width Buttons als Column
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.pop(c, 'reorder'),
+                icon: const Icon(Icons.shopping_cart_outlined, size: 16),
+                label: const Text('Verbraucht & Nachkaufen'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.pop(c, 'consumed'),
+                icon: Icon(Icons.check_rounded, size: 16, color: Colors.green.shade600),
+                label: Text('Verbraucht', style: TextStyle(color: Colors.green.shade700)),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: Colors.green.shade400),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.pop(c, 'cancel'),
+                child: const Text('Abbrechen'),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    if (result == null || result == 'cancel' || !mounted) return;
+    if (_item.minThreshold > 0) {
+      await ref.read(inventoryProvider.notifier).updateItem(_item.copyWith(quantity: 0));
+    }
+    await ref.read(inventoryProvider.notifier).deleteItem(_item.id);
+    if (!mounted) return;
+    if (result == 'reorder') await _showAddToShoppingListDialog();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _markDisposed() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (c) {
+        final theme = Theme.of(c);
+        return AlertDialog(
+          title: const Text('Entsorgt?'),
+          content: Text('"${_item.ingredientName}" als entsorgt markieren und entfernen?'),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.pop(c, 'reorder'),
+                icon: const Icon(Icons.shopping_cart_outlined, size: 16),
+                label: const Text('Entsorgen & Nachkaufen'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.error,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.pop(c, 'disposed'),
+                icon: Icon(Icons.delete_outline_rounded, size: 16, color: theme.colorScheme.error),
+                label: Text('Entsorgen', style: TextStyle(color: theme.colorScheme.error)),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.5)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.pop(c, 'cancel'),
+                child: const Text('Abbrechen'),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    if (result == null || result == 'cancel' || !mounted) return;
+    await ref.read(inventoryProvider.notifier).deleteItem(_item.id);
+    if (!mounted) return;
+    if (result == 'reorder') await _showAddToShoppingListDialog();
+    if (mounted) Navigator.of(context).pop();
+  }
+  // Gibt zurück:
+  //   null         → Abbrechen
+  //   'confirm:<n>' → n % verbraucht (< 100)
+  //   'consumed'   → vollständig verbraucht, kein Nachkauf
+  //   'reorder'    → vollständig verbraucht + Nachkaufen
+  Future<String?> _showOpenedDialog(BuildContext context) async {
     double sliderValue = 0;
-    return showDialog<double>(
+    return showDialog<String>(
       context: context,
       builder: (c) {
         return StatefulBuilder(
           builder: (c, setDialogState) {
             final theme = Theme.of(c);
+            final is100 = sliderValue >= 100;
             return AlertDialog(
               title: const Text('Als geöffnet markieren'),
               content: Column(
@@ -89,7 +361,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
                         color: theme.colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 20),
-                  // Großes Prozent-Display
+                  // Prozent-Display
                   Center(
                     child: Text(
                       '${sliderValue.round()} %',
@@ -99,14 +371,19 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
                       ),
                     ),
                   ),
-                  // Beschriftung der verbleibenden Menge
                   if (_item.quantity != null) ...[
                     const SizedBox(height: 4),
                     Center(
                       child: Text(
-                        'Verbleibend: ${(_item.quantity! * (1 - sliderValue / 100)).toStringAsFixed(1)} ${_item.unit ?? ''}',
+                        is100
+                            ? '✅ Vollständig verbraucht'
+                            : 'Verbleibend: ${(_item.quantity! * (1 - sliderValue / 100)).toStringAsFixed(1)} ${_item.unit ?? ''}',
                         style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant),
+                          color: is100
+                              ? Colors.green.shade700
+                              : theme.colorScheme.onSurfaceVariant,
+                          fontWeight: is100 ? FontWeight.w600 : null,
+                        ),
                       ),
                     ),
                   ],
@@ -116,55 +393,88 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
                     min: 0,
                     max: 100,
                     divisions: 20,
-                    label: '${sliderValue.round()} %',
+                    label: is100 ? 'Verbraucht' : '${sliderValue.round()} %',
                     activeColor: _percentColor(sliderValue, theme),
                     onChanged: (v) => setDialogState(() => sliderValue = v),
                   ),
                   // Schnell-Buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [0, 25, 50, 75].map((p) {
+                    children: [0, 25, 50, 75, 100].map((p) {
                       final isSelected = sliderValue.round() == p;
+                      final col = _percentColor(p.toDouble(), theme);
                       return GestureDetector(
                         onTap: () => setDialogState(() => sliderValue = p.toDouble()),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? _percentColor(p.toDouble(), theme).withValues(alpha: 0.15)
+                                ? col.withValues(alpha: 0.15)
                                 : theme.colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isSelected
-                                  ? _percentColor(p.toDouble(), theme)
-                                  : Colors.transparent,
+                              color: isSelected ? col : Colors.transparent,
                             ),
                           ),
                           child: Text(
                             '$p %',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected
-                                  ? _percentColor(p.toDouble(), theme)
-                                  : theme.colorScheme.onSurfaceVariant,
+                              color: isSelected ? col : theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
                       );
                     }).toList(),
                   ),
+                  // ── Bei 100 %: Aktions-Buttons direkt im Dialog ────────
+                  if (is100) ...[
+                    const SizedBox(height: 16),
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => Navigator.pop(c, 'reorder'),
+                        icon: const Icon(Icons.shopping_cart_outlined, size: 16),
+                        label: const Text('Verbraucht & Nachkaufen'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => Navigator.pop(c, 'consumed'),
+                        icon: Icon(Icons.check_rounded, size: 16, color: Colors.green.shade600),
+                        label: Text(
+                          'Verbraucht',
+                          style: TextStyle(color: Colors.green.shade700),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.green.shade400),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
                 ],
               ),
+              // Standard-Actions (nur bei < 100 % sichtbar, bei 100% nur Abbrechen)
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(c),
                   child: const Text('Abbrechen'),
                 ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(c, sliderValue),
-                  child: const Text('Bestätigen'),
-                ),
+                if (!is100)
+                  FilledButton(
+                    onPressed: () =>
+                        Navigator.pop(c, 'confirm:${sliderValue.round()}'),
+                    child: const Text('Bestätigen'),
+                  ),
               ],
             );
           },
@@ -174,9 +484,10 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
   }
 
   Color _percentColor(double percent, ThemeData theme) {
-    if (percent >= 75) return theme.colorScheme.error;
-    if (percent >= 50) return Colors.orange.shade700;
-    if (percent >= 25) return Colors.amber.shade700;
+    if (percent >= 100) return Colors.green.shade600;   // vollständig verbraucht = gut
+    if (percent >= 75) return Colors.orange.shade700;
+    if (percent >= 50) return Colors.amber.shade700;
+    if (percent >= 25) return Colors.lightGreen.shade600;
     return Colors.green.shade700;
   }
 
@@ -184,55 +495,28 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
   Future<void> _adjustConsumption() async {
     final result = await _showOpenedDialog(context);
     if (result == null || !mounted) return;
-    final percent = result;
+
+    if (result == 'consumed') {
+      await _doConsumeCompletely(reorder: false);
+      return;
+    }
+    if (result == 'reorder') {
+      await _doConsumeCompletely(reorder: true);
+      return;
+    }
+
+    final percent = double.tryParse(result.replaceFirst('confirm:', '')) ?? 0;
     if (percent <= 0) return;
+
     double? newQty = _item.quantity;
     if (newQty != null) {
       newQty = newQty * (1 - percent / 100);
-      if (newQty < 0) newQty = 0;
     }
     final updated = _item.copyWith(quantity: newQty);
     await ref.read(inventoryProvider.notifier).updateItem(updated);
     if (mounted) setState(() => _item = updated);
   }
 
-  Future<void> _markConsumed() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Verbraucht?'),
-        content: Text('"${_item.ingredientName}" aus dem Vorrat entfernen?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Abbrechen')),
-          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Verbraucht')),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    await ref.read(inventoryProvider.notifier).deleteItem(_item.id);
-    if (mounted) Navigator.of(context).pop();
-  }
-
-  Future<void> _markDisposed() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Entsorgt?'),
-        content: Text('"${_item.ingredientName}" als entsorgt markieren und entfernen?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Abbrechen')),
-          FilledButton(
-            onPressed: () => Navigator.pop(c, true),
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(c).colorScheme.error),
-            child: const Text('Entsorgen'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    await ref.read(inventoryProvider.notifier).deleteItem(_item.id);
-    if (mounted) Navigator.of(context).pop();
-  }
 
   Future<void> _openEdit() async {
     await showModalBottomSheet(

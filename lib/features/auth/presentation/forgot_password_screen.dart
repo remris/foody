@@ -57,7 +57,7 @@ class _ForgotPasswordScreenState
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: _emailSent ? _buildSuccess(theme) : _buildForm(theme, isLoading),
         ),

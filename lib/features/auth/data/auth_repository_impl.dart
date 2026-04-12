@@ -73,6 +73,16 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> updatePassword(String newPassword) async {
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
+  }
+
+  @override
+  Future<void> exchangeCodeForSession(String code) async {
+    await _client.auth.exchangeCodeForSession(code);
+  }
+
+  @override
   User? getCurrentUser() => _client.auth.currentUser;
 
   @override

@@ -43,12 +43,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final greeting = 'Hi';
+    final hour = now.hour;
+    final greeting = hour < 11 ? 'Guten Morgen' : hour < 17 ? 'Hallo' : 'Guten Abend';
     final user = ref.watch(currentUserProvider);
     final profile = ref.watch(ownProfileProvider).valueOrNull;
-    final name = (profile?.displayName.isNotEmpty == true)
-        ? profile!.displayName
-        : (user?.email?.split('@').first ?? '');
+    // Spitzname bevorzugen, dann Anzeigename, dann Email-Prefix
+    final name = (profile?.householdNickname?.isNotEmpty == true)
+        ? profile!.householdNickname!
+        : (profile?.displayName.isNotEmpty == true)
+            ? profile!.displayName
+            : (user?.email?.split('@').first ?? '');
     final isPro = ref.watch(isProProvider);
     final theme = Theme.of(context);
     final isFeedTab = _tabController.index == 1;
@@ -138,6 +142,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             isPro: isPro,
             theme: theme,
             now: now,
+            hour: hour,
           ),
           // Tab 1: Mein Feed (von gefolgten Usern)
           const FollowingFeedScreen(),
@@ -155,6 +160,7 @@ class _HomeContent extends ConsumerWidget {
   final bool isPro;
   final ThemeData theme;
   final DateTime now;
+  final int hour;
 
   const _HomeContent({
     required this.greeting,
@@ -162,6 +168,7 @@ class _HomeContent extends ConsumerWidget {
     required this.isPro,
     required this.theme,
     required this.now,
+    required this.hour,
   });
 
   @override
@@ -185,7 +192,7 @@ class _HomeContent extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '$greeting${name.isNotEmpty ? ', $name' : ''}! 👋',
+                            '$greeting${name.isNotEmpty ? ', $name' : ''}! ${hour < 11 ? '☀️' : hour < 17 ? '👋' : '🌙'}',
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),

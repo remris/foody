@@ -209,13 +209,17 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
   }
 
   void _showTransferSheet(BuildContext context, List<ShoppingListItem> checked) {
+    final selectedList = ref.read(selectedShoppingListProvider);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => TransferToInventorySheet(checkedItems: checked),
+      builder: (_) => TransferToInventorySheet(
+        checkedItems: checked,
+        sourceList: selectedList,
+      ),
     );
   }
 
@@ -486,13 +490,24 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
   /// Überträgt Items direkt ins Inventar ohne zweites Sheet.
   Future<void> _transferToInventoryDirect(List<ShoppingListItem> items) async {
     final userId = ref.read(currentUserProvider)?.id ?? '';
+    final household = ref.read(householdProvider).valueOrNull;
+    final selectedList = ref.read(selectedShoppingListProvider);
+
+    // householdId: Haushaltsliste → Haushalt-Vorrat; User in Haushalt → Haushalt-Vorrat
+    String? householdId;
+    if (selectedList?.householdId != null) {
+      householdId = selectedList!.householdId;
+    } else if (household != null) {
+      householdId = household.id;
+    }
+
     for (final shopItem in items) {
       final inventoryItem = InventoryItem(
         id: '',
         userId: userId,
+        householdId: householdId,
         ingredientId: DateTime.now().millisecondsSinceEpoch.toString(),
         ingredientName: shopItem.name,
-        // quantity als double versuchen, Einheit im String behalten
         quantity: _parseQuantityValue(shopItem.quantity),
         unit: _parseQuantityUnit(shopItem.quantity),
         createdAt: DateTime.now(),
@@ -502,7 +517,9 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${items.length} Artikel ins Inventar übernommen ✅'),
+          content: Text(
+            '${items.length} Artikel ins ${householdId != null ? 'Haushalt-' : ''}Inventar übernommen ✅',
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -2107,8 +2124,15 @@ class _CreateListSheet extends StatefulWidget {
 
 class _CreateListSheetState extends State<_CreateListSheet> {
   final _controller = TextEditingController();
-  bool _shareWithHousehold = false;
+  late bool _shareWithHousehold;
   String? _selectedMarket;
+
+  @override
+  void initState() {
+    super.initState();
+    // Wenn User in Haushalt ist → Switch standardmäßig an
+    _shareWithHousehold = widget.hasHousehold;
+  }
 
   static const _markets = [
     '🟢 Rewe', '🔵 Edeka', '🟡 Lidl', '🟠 Aldi',

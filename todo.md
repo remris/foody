@@ -101,3 +101,80 @@
 - `groq_service.dart`: `_randomHint()` auf 5 Küchen, alle Prompts auf „EXAKT 5"
 - `kitchen_screen.dart`: `_styleTags` um Airfryer und OnePot ergänzen
 
+
+---
+
+## Feature: Meine Communities ✅ Implementiert
+
+### Design-Entscheidungen (abgestimmt)
+| Punkt | Entscheidung |
+|-------|-------------|
+| Beitritt | Per Einladungscode **oder** PLZ-Suche – beides möglich |
+| Genehmigung | Admin muss jeden Beitritt manuell bestätigen (wie Haushalt) |
+| Pro-Gate | Nur **Erstellen** einer Community erfordert Pro; Beitreten ist kostenlos |
+| Max. Mitglieder | **50 pro Community** (Supabase-Trigger erzwingt Limit) |
+| Community-Feed | Rein intern – nur Mitglieder sehen Posts, **nicht** im globalen Feed |
+| Reste-Sharing | Nach „Abgeholt"-Klick wird Eintrag sofort gelöscht (Supabase-Trigger) – keine Eskalation der Liste |
+| Einstiegspunkt | Avatar-Menü → **Meine Communities** (unter „Mein Haushalt") |
+
+### Implementierte Dateien
+| Datei | Beschreibung |
+|-------|-------------|
+| `supabase_migration_26_communities.sql` | Tabellen: communities, community_members, community_posts, community_shares + Trigger + RLS |
+| `lib/models/community.dart` | Models: Community, CommunityMember, CommunityPost, CommunityShare |
+| `lib/features/community/data/community_local_repository.dart` | Alle DB-Operationen |
+| `lib/features/community/presentation/community_local_provider.dart` | Riverpod-Provider + Actions-Notifier |
+| `lib/features/community/presentation/community_list_screen.dart` | Übersicht, Erstellen (Pro), Beitreten (Code + PLZ) |
+| `lib/features/community/presentation/community_detail_screen.dart` | Feed / Teilen / Mitglieder-Tabs; Admin-Verwaltung |
+| `lib/widgets/main_shell.dart` | Menü-Eintrag „Meine Communities" + Route `/communities` |
+| `lib/core/router/app_router.dart` | Route `/communities` → `CommunityListScreen` |
+
+### Noch ausstehend (vor Go-Live)
+- [ ] `supabase_migration_26_communities.sql` im Supabase-Dashboard ausführen
+- [ ] `community_posts` Tabelle: Spalte `author_name` + `author_avatar` aus `social_profiles` via JOIN befüllen (alternativ reicht der gecachte `author_name` beim Insert)
+- [ ] Push-Benachrichtigung wenn Beitrittsanfrage genehmigt wird (optional, spätere Erweiterung)
+
+---
+
+## Feature: Community Teilen – Erweiterter Usecase (Abholungs-Flow + Hilfsanfragen)
+
+### Konzept
+Der Teilen-Tab in der Community soll zwei Bereiche haben:
+1. **Angebote** (Reste / Lebensmittel verschenken)
+2. **Suchanfragen** (z.B. „Ich brauche eine Tasse Zucker")
+
+### Angebote – erweiterter Flow
+| Schritt | Beschreibung |
+|---------|-------------|
+| Erstellen | User erstellt Angebot (Name, Menge, Hinweis) |
+| Anfragen | Anderer User klickt „Abholen anfragen" → Ersteller sieht die Anfrage unter seinem Angebot |
+| Bestätigen | Ersteller bestätigt einen Abholer (andere Anfragen werden abgelehnt) |
+| Mini-Chat | Nach Bestätigung: Ersteller ↔ Abholer schreiben kurz (Ort, Zeitpunkt) |
+| Abschließen | Ersteller markiert als „Abgeholt" → Eintrag wird gelöscht |
+
+### Suchanfragen – neuer Flow
+| Schritt | Beschreibung |
+|---------|-------------|
+| Erstellen | User erstellt Anfrage: z.B. „5 Eier gesucht" |
+| Aushelfen | Anderer User klickt „Aushelfen" → Ersteller sieht das Angebot |
+| Mini-Chat | Ersteller akzeptiert → Ersteller ↔ Aushelfer kommunizieren (Wo/Wann) |
+| Schließen | Ersteller schließt Anfrage → wird gelöscht |
+
+### Benötigte DB-Tabellen
+- `community_share_requests` – Abholungsanfragen für ein Angebot  
+  `(id, share_id, community_id, user_id, display_name, message, status: pending/accepted/rejected, created_at)`
+- `community_help_requests` – Suchanfragen  
+  `(id, community_id, user_id, display_name, item_name, quantity, note, status: open/closed, created_at)`
+- `community_help_offers` – Angebote auf Suchanfragen  
+  `(id, request_id, community_id, user_id, display_name, message, status: pending/accepted, created_at)`
+- `community_messages` – Mini-Chat (für Shares & Help)  
+  `(id, context_type: share/help, context_id, sender_id, sender_name, recipient_id, text, created_at, read_at)`
+
+### Implementierung  
+- [x] SQL Migration: `supabase_migration_27_share_requests.sql`
+- [x] Models: `CommunityShareRequest`, `CommunityHelpRequest`, `CommunityHelpOffer`, `CommunityMessage`
+- [x] Repository: community_local_repository.dart erweitert
+- [x] Provider: community_local_provider.dart erweitert
+- [x] UI: Share-Tab mit 2 Sub-Tabs (Angebote / Suche), Anfragen-Badge, Mini-Chat-Sheet
+
+

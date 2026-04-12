@@ -250,7 +250,7 @@ class _RecipeCommentsNotifier
     final comment = await repo.addComment(
       recipeId: arg,
       userId: userId,
-      authorName: repo.currentAuthorName,
+      authorName: await repo.fetchCurrentAuthorName(),
       content: content,
     );
 

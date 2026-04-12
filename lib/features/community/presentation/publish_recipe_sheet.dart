@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomu/features/community/presentation/community_provider.dart';
+import 'package:kokomu/features/profile/presentation/profile_provider.dart';
 import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
 import 'package:kokomu/models/community_recipe.dart';
 import 'package:kokomu/models/recipe.dart';
+import 'package:kokomu/widgets/tag_picker_sheet.dart';
 import 'package:kokomu/core/services/supabase_service.dart';
 
 /// Sheet zum Veröffentlichen eines Rezepts in der Community.
@@ -25,7 +27,6 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
   // Gemeinsam
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
-  final _tagController = TextEditingController();
   String? _selectedCategory;
   final List<String> _tags = [];
   bool _isPublishing = false;
@@ -68,23 +69,12 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
     _tabController.dispose();
     _titleController.dispose();
     _descController.dispose();
-    _tagController.dispose();
     _ingredientNameCtrl.dispose();
     _ingredientAmountCtrl.dispose();
     for (final c in _stepControllers) {
       c.dispose();
     }
     super.dispose();
-  }
-
-  void _addTag() {
-    final tag = _tagController.text.trim();
-    if (tag.isNotEmpty && !_tags.contains(tag)) {
-      setState(() {
-        _tags.add(tag);
-        _tagController.clear();
-      });
-    }
   }
 
   void _addIngredient() {
@@ -158,7 +148,12 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
     setState(() => _isPublishing = true);
 
     final user = SupabaseService.client.auth.currentUser;
-    final authorName = user?.email?.split('@').first ?? 'kokomu-User';
+    // Profil-Name bevorzugen
+    final ownProfile = ref.read(ownProfileProvider).valueOrNull;
+    final authorName = (ownProfile != null && ownProfile.displayName.isNotEmpty)
+        ? ownProfile.displayName
+        : user?.userMetadata?['display_name'] as String? ??
+            user?.email?.split('@').first ?? 'kokomu-User';
 
     final communityRecipe = CommunityRecipe.fromFoodRecipe(
       recipe!,
@@ -292,22 +287,19 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
               selectedCategory: _selectedCategory,
               tags: _tags,
               categories: _categories,
-              tagController: _tagController,
               onRecipeSelected: (r) => setState(() {
                 _selectedRecipe = r;
                 _titleController.text = r.title;
                 _descController.text = r.description;
               }),
               onCategoryChanged: (c) => setState(() => _selectedCategory = c),
-              onTagAdded: _addTag,
-              onTagRemoved: (t) => setState(() => _tags.remove(t)),
+              onTagsChanged: (t) => setState(() { _tags.clear(); _tags.addAll(t); }),
             ),
             // ── Tab 2: Neues Rezept von Grund auf ───────────────────────
             _CreateNewTab(
               scrollController: scrollController,
               titleController: _titleController,
               descController: _descController,
-              tagController: _tagController,
               ingredientNameCtrl: _ingredientNameCtrl,
               ingredientAmountCtrl: _ingredientAmountCtrl,
               ingredients: _ingredients,
@@ -320,8 +312,7 @@ class _PublishRecipeSheetState extends ConsumerState<PublishRecipeSheet>
               categories: _categories,
               difficulties: _difficulties,
               onCategoryChanged: (c) => setState(() => _selectedCategory = c),
-              onTagAdded: _addTag,
-              onTagRemoved: (t) => setState(() => _tags.remove(t)),
+              onTagsChanged: (t) => setState(() { _tags.clear(); _tags.addAll(t); }),
               onIngredientAdded: _addIngredient,
               onIngredientRemoved: (i) => setState(() => _ingredients.removeAt(i)),
               onStepAdded: _addStep,
@@ -360,10 +351,8 @@ Widget _buildMetaSection({
   required int cookingTime,
   required int servings,
   required List<String> tags,
-  required TextEditingController tagController,
+  required ValueChanged<List<String>> onTagsChanged,
   required ValueChanged<String?> onCategoryChanged,
-  required VoidCallback onTagAdded,
-  required ValueChanged<String> onTagRemoved,
   required ValueChanged<int> onCookingTimeChanged,
   required ValueChanged<String> onDifficultyChanged,
   required ValueChanged<int> onServingsChanged,
@@ -430,36 +419,39 @@ Widget _buildMetaSection({
         ],
       ),
       const SizedBox(height: 16),
-      Text('Tags', style: theme.textTheme.labelLarge),
-      const SizedBox(height: 8),
       Row(
         children: [
-          Expanded(
-            child: TextField(
-              controller: tagController,
-              decoration: const InputDecoration(
-                  hintText: 'Tag und Enter drücken', isDense: true),
-              onSubmitted: (_) => onTagAdded(),
-            ),
+          Text('Tags', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(width: 4),
+          Text('optional', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+          const Spacer(),
+          TextButton.icon(
+            onPressed: () async {
+              final selected = await TagPickerSheet.show(context, selected: tags);
+              if (selected != null) onTagsChanged(selected);
+            },
+            icon: const Icon(Icons.add_rounded, size: 16),
+            label: const Text('Tags wählen'),
           ),
-          IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: onTagAdded),
         ],
       ),
-      if (tags.isNotEmpty) ...[
-        const SizedBox(height: 8),
+      const SizedBox(height: 8),
+      if (tags.isNotEmpty)
         Wrap(
           spacing: 6,
-          children: tags
-              .map((t) => Chip(
-                    label: Text(t),
-                    onDeleted: () => onTagRemoved(t),
-                    visualDensity: VisualDensity.compact,
-                  ))
-              .toList(),
-        ),
-      ],
+          runSpacing: 4,
+          children: tags.map((t) => Chip(
+            label: Text(t, style: const TextStyle(fontSize: 12)),
+            deleteIcon: const Icon(Icons.close, size: 14),
+            visualDensity: VisualDensity.compact,
+            onDeleted: () {
+              final updated = List<String>.from(tags)..remove(t);
+              onTagsChanged(updated);
+            },
+          )).toList(),
+        )
+      else
+        Text('Noch keine Tags', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
       const SizedBox(height: 16),
       Container(
         padding: const EdgeInsets.all(12),
@@ -496,9 +488,7 @@ class _ShareSavedTab extends ConsumerWidget {
   final List<String> categories;
   final ValueChanged<FoodRecipe> onRecipeSelected;
   final ValueChanged<String?> onCategoryChanged;
-  final VoidCallback onTagAdded;
-  final ValueChanged<String> onTagRemoved;
-  final TextEditingController tagController;
+  final ValueChanged<List<String>> onTagsChanged;
 
   const _ShareSavedTab({
     required this.scrollController,
@@ -508,9 +498,7 @@ class _ShareSavedTab extends ConsumerWidget {
     required this.categories,
     required this.onRecipeSelected,
     required this.onCategoryChanged,
-    required this.onTagAdded,
-    required this.onTagRemoved,
-    required this.tagController,
+    required this.onTagsChanged,
   });
 
   @override
@@ -633,34 +621,39 @@ class _ShareSavedTab extends ConsumerWidget {
             }).toList(),
           ),
           const SizedBox(height: 16),
-          Text('Tags hinzufügen (optional)', style: theme.textTheme.labelLarge),
-          const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(
-                child: TextField(
-                  controller: tagController,
-                  decoration: const InputDecoration(
-                      hintText: 'Tag eingeben und Enter drücken', isDense: true),
-                  onSubmitted: (_) => onTagAdded(),
-                ),
+              Text('Tags', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(width: 4),
+              Text('optional', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () async {
+                  final selected = await TagPickerSheet.show(context, selected: tags);
+                  if (selected != null) onTagsChanged(selected);
+                },
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: const Text('Tags wählen'),
               ),
-              IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: onTagAdded),
             ],
           ),
-          if (tags.isNotEmpty) ...[
-            const SizedBox(height: 8),
+          const SizedBox(height: 8),
+          if (tags.isNotEmpty)
             Wrap(
               spacing: 6,
-              children: tags
-                  .map((t) => Chip(
-                        label: Text(t),
-                        onDeleted: () => onTagRemoved(t),
-                        visualDensity: VisualDensity.compact,
-                      ))
-                  .toList(),
-            ),
-          ],
+              runSpacing: 4,
+              children: tags.map((t) => Chip(
+                label: Text(t, style: const TextStyle(fontSize: 12)),
+                deleteIcon: const Icon(Icons.close, size: 14),
+                visualDensity: VisualDensity.compact,
+                onDeleted: () {
+                  final updated = List<String>.from(tags)..remove(t);
+                  onTagsChanged(updated);
+                },
+              )).toList(),
+            )
+          else
+            Text('Noch keine Tags', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
           const SizedBox(height: 80),
         ],
       ],
@@ -673,7 +666,6 @@ class _CreateNewTab extends StatelessWidget {
   final ScrollController scrollController;
   final TextEditingController titleController;
   final TextEditingController descController;
-  final TextEditingController tagController;
   final TextEditingController ingredientNameCtrl;
   final TextEditingController ingredientAmountCtrl;
   final List<_IngredientEntry> ingredients;
@@ -686,8 +678,7 @@ class _CreateNewTab extends StatelessWidget {
   final List<String> categories;
   final List<String> difficulties;
   final ValueChanged<String?> onCategoryChanged;
-  final VoidCallback onTagAdded;
-  final ValueChanged<String> onTagRemoved;
+  final ValueChanged<List<String>> onTagsChanged;
   final VoidCallback onIngredientAdded;
   final ValueChanged<int> onIngredientRemoved;
   final VoidCallback onStepAdded;
@@ -700,7 +691,6 @@ class _CreateNewTab extends StatelessWidget {
     required this.scrollController,
     required this.titleController,
     required this.descController,
-    required this.tagController,
     required this.ingredientNameCtrl,
     required this.ingredientAmountCtrl,
     required this.ingredients,
@@ -713,8 +703,7 @@ class _CreateNewTab extends StatelessWidget {
     required this.categories,
     required this.difficulties,
     required this.onCategoryChanged,
-    required this.onTagAdded,
-    required this.onTagRemoved,
+    required this.onTagsChanged,
     required this.onIngredientAdded,
     required this.onIngredientRemoved,
     required this.onStepAdded,
@@ -869,10 +858,8 @@ class _CreateNewTab extends StatelessWidget {
           cookingTime: cookingTime,
           servings: servings,
           tags: tags,
-          tagController: tagController,
           onCategoryChanged: onCategoryChanged,
-          onTagAdded: onTagAdded,
-          onTagRemoved: onTagRemoved,
+          onTagsChanged: onTagsChanged,
           onCookingTimeChanged: onCookingTimeChanged,
           onDifficultyChanged: onDifficultyChanged,
           onServingsChanged: onServingsChanged,

@@ -11,8 +11,29 @@ class CommunityMealPlanRepository {
   final _client = SupabaseService.client;
 
   String? get currentUserId => _client.auth.currentUser?.id;
-  String get currentAuthorName =>
-      _client.auth.currentUser?.email?.split('@').first ?? 'kokomu-User';
+  String get currentAuthorName {
+    final meta = _client.auth.currentUser?.userMetadata?['display_name'] as String?;
+    if (meta != null && meta.isNotEmpty) return meta;
+    return _client.auth.currentUser?.email?.split('@').first ?? 'kokomu-User';
+  }
+
+  /// Profil-Name aus user_profiles laden (async, genauer)
+  Future<String> fetchCurrentAuthorName() async {
+    final userId = currentUserId;
+    if (userId == null) return currentAuthorName;
+    try {
+      final data = await _client
+          .from('user_profiles')
+          .select('display_name')
+          .eq('id', userId)
+          .maybeSingle();
+      if (data != null) {
+        final name = data['display_name'] as String?;
+        if (name != null && name.isNotEmpty) return name;
+      }
+    } catch (_) {}
+    return currentAuthorName;
+  }
 
   // ─── Feed ────────────────────────────────────────────────────────────────
 
@@ -117,9 +138,10 @@ class CommunityMealPlanRepository {
     final userId = currentUserId;
     if (userId == null) throw Exception('Nicht eingeloggt');
 
+    final authorName = await fetchCurrentAuthorName();
     final result = await _client.from(_table).insert({
       'user_id': userId,
-      'author_name': currentAuthorName,
+      'author_name': authorName,
       'title': title,
       'description': description,
       'plan_json': planJson,
@@ -143,9 +165,10 @@ class CommunityMealPlanRepository {
     final userId = currentUserId;
     if (userId == null) throw Exception('Nicht eingeloggt');
 
+    final authorName = await fetchCurrentAuthorName();
     final result = await _client.from(_table).insert({
       'user_id': userId,
-      'author_name': currentAuthorName,
+      'author_name': authorName,
       'title': title,
       'description': description,
       'plan_json': planJson,

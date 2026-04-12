@@ -63,10 +63,14 @@ class _HouseholdChatSectionState
           ),
         );
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nachricht konnte nicht gesendet werden')),
+          SnackBar(
+            content: Text('Fehler: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     }

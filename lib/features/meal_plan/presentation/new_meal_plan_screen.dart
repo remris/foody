@@ -6,6 +6,7 @@ import 'package:kokomu/features/community/presentation/community_meal_plan_provi
 import 'package:kokomu/features/community/presentation/publish_meal_plan_sheet.dart';
 import 'package:kokomu/features/meal_plan/presentation/meal_plan_provider.dart';
 import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_category_provider.dart';
 import 'package:kokomu/models/recipe.dart';
 
 import 'package:kokomu/models/community_meal_plan.dart';
@@ -496,7 +497,7 @@ class _NewMealPlanScreenState extends ConsumerState<NewMealPlanScreen> {
                       ),
                     ),
                   );
-                }),
+               }),
               ),
             ),
           ),
@@ -662,6 +663,20 @@ class _NewPlanSlotCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final savedAsync = ref.read(savedRecipesProvider);
     final recipes = savedAsync.valueOrNull ?? [];
+    final categories = ref.read(recipeCategoryProvider);
+
+    // Slot → passende RecipeMealType-Vorselektion
+    RecipeMealType? _slotToType(MealSlot s) {
+      switch (s) {
+        case MealSlot.breakfast: return RecipeMealType.breakfast;
+        case MealSlot.lunch:     return RecipeMealType.lunch;
+        case MealSlot.dinner:    return RecipeMealType.dinner;
+        case MealSlot.snack:     return RecipeMealType.snack;
+        default:                 return null;
+      }
+    }
+
+    final defaultType = _slotToType(slot);
 
     showModalBottomSheet(
       context: context,
@@ -670,94 +685,20 @@ class _NewPlanSlotCard extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.75,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.restaurant_menu,
-                      color: theme.colorScheme.primary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Rezept für ${slot.emoji} ${slot.label}',
-                      style: theme.textTheme.titleLarge
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              if (recipes.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Center(
-                    child: Text(
-                      'Noch keine Rezepte gespeichert.\nSpeichere zuerst Rezepte in der Küche.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                  ),
-                )
-              else
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: recipes.length,
-                    itemBuilder: (ctx, i) {
-                      final recipe = recipes[i];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor:
-                                theme.colorScheme.primaryContainer,
-                            child: Icon(Icons.restaurant,
-                                size: 18,
-                                color: theme.colorScheme.onPrimaryContainer),
-                          ),
-                          title: Text(recipe.title,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600)),
-                          subtitle: Text(
-                            '${recipe.cookingTimeMinutes} Min.'
-                            '${recipe.nutrition != null ? ' · ${recipe.nutrition!.calories} kcal' : ''}',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            ref
-                                .read(_newPlanEntriesProvider.notifier)
-                                .setMeal(dayIndex, slot, recipe);
-                            HapticFeedback.lightImpact();
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Abbrechen'),
-              ),
-            ],
-          ),
-        ),
+      builder: (_) => _RecipePickerSheet(
+        slot: slot,
+        recipes: recipes,
+        categories: categories,
+        defaultFilter: defaultType,
+        onPick: (recipe) {
+          ref.read(_newPlanEntriesProvider.notifier).setMeal(dayIndex, slot, recipe);
+          HapticFeedback.lightImpact();
+        },
       ),
     );
   }
 
-  void _showOptions(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+  void _showOptions(BuildContext context, WidgetRef ref) {    final theme = Theme.of(context);
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -790,6 +731,210 @@ class _NewPlanSlotCard extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Rezept-Picker mit Kategorie-Filter ──────────────────────────────────────
+
+class _RecipePickerSheet extends StatefulWidget {
+  final MealSlot slot;
+  final List<FoodRecipe> recipes;
+  final Map<String, RecipeMealType> categories;
+  final RecipeMealType? defaultFilter;
+  final ValueChanged<FoodRecipe> onPick;
+
+  const _RecipePickerSheet({
+    required this.slot,
+    required this.recipes,
+    required this.categories,
+    required this.defaultFilter,
+    required this.onPick,
+  });
+
+  @override
+  State<_RecipePickerSheet> createState() => _RecipePickerSheetState();
+}
+
+class _RecipePickerSheetState extends State<_RecipePickerSheet> {
+  late RecipeMealType? _activeFilter;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeFilter = widget.defaultFilter;
+  }
+
+  List<FoodRecipe> get _filtered {
+    if (_activeFilter == null) return widget.recipes;
+    return widget.recipes.where((r) {
+      final cat = widget.categories[r.savedRecipeId ?? r.id];
+      return cat == _activeFilter;
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final filtered = _filtered;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.8,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+            child: Row(
+              children: [
+                Icon(Icons.restaurant_menu, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Rezept für ${widget.slot.emoji} ${widget.slot.label}',
+                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(context),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+          ),
+          // Kategorie-Filterleiste
+          SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                // "Alle" Chip
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    label: const Text('Alle'),
+                    selected: _activeFilter == null,
+                    onSelected: (_) => setState(() => _activeFilter = null),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+                // Pro Kategorie ein Chip
+                ...RecipeMealType.values.map((type) {
+                  final count = widget.recipes
+                      .where((r) => widget.categories[r.savedRecipeId ?? r.id] == type)
+                      .length;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: FilterChip(
+                      label: Text('${type.emoji} ${type.label}${count > 0 ? ' ($count)' : ''}',
+                          style: const TextStyle(fontSize: 12)),
+                      selected: _activeFilter == type,
+                      onSelected: (_) => setState(() =>
+                          _activeFilter = _activeFilter == type ? null : type),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1),
+          // Rezeptliste
+          if (widget.recipes.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Text(
+                  'Noch keine Rezepte gespeichert.\nSpeichere zuerst Rezepte in der Küche.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+            )
+          else if (filtered.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.filter_list_off_rounded,
+                        size: 36, color: theme.colorScheme.outline),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Keine Rezepte mit dieser Kategorie.\nWähle "Alle" um alle Rezepte anzuzeigen.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: () => setState(() => _activeFilter = null),
+                      child: const Text('Alle anzeigen'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Flexible(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+                shrinkWrap: true,
+                itemCount: filtered.length,
+                itemBuilder: (ctx, i) {
+                  final recipe = filtered[i];
+                  final cat = widget.categories[recipe.savedRecipeId ?? recipe.id];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        child: Text(cat?.emoji ?? '🍽️',
+                            style: const TextStyle(fontSize: 16)),
+                      ),
+                      title: Text(recipe.title,
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        [
+                          '${recipe.cookingTimeMinutes} Min.',
+                          if (recipe.nutrition != null)
+                            '${recipe.nutrition!.calories} kcal',
+                          if (cat != null) cat.label,
+                        ].join(' · '),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      trailing: const Icon(Icons.add_circle_outline_rounded),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        widget.onPick(recipe);
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
       ),
     );
   }

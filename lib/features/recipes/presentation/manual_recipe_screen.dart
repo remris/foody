@@ -6,6 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 import 'package:kokomu/core/data/ingredient_catalog.dart';
 import 'package:kokomu/core/services/supabase_service.dart';
 import 'package:kokomu/features/recipes/presentation/saved_recipes_provider.dart';
+import 'package:kokomu/features/recipes/presentation/recipe_category_provider.dart';
+import 'package:kokomu/widgets/tag_picker_sheet.dart';
 import 'package:kokomu/models/recipe.dart';
 
 // Alle verfügbaren Einheiten â€“ sortiert nach HÃ¤ufigkeit
@@ -39,7 +41,7 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
   final _timeController = TextEditingController(text: '30');
   final _servingsController = TextEditingController(text: '2');
   String _difficulty = 'Einfach';
-  String? _category;
+  final List<String> _categories = [];  // Mehrfachauswahl, mind. 1 Pflicht
   final _ingredients = <_IngredientEntry>[];
   final _steps = <TextEditingController>[];
   final _tags = <String>[];
@@ -194,11 +196,23 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
     }
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Mindestens eine Kategorie ist Pflicht
+    if (_categories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitte wähle mindestens eine Kategorie aus.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     if (_ingredients.isEmpty || _steps.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mindestens 1 Zutat und 1 Schritt nÃ¶tig.')),
+        const SnackBar(content: Text('Mindestens 1 Zutat und 1 Schritt nötig.')),
       );
       return;
     }
@@ -208,7 +222,6 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
         .map((i) {
           final qty = i.amountController.text.trim();
           final unit = i.unit;
-          // "nach Geschmack" braucht keine Zahl davor
           final amount = unit == 'nach Geschmack'
               ? 'nach Geschmack'
               : qty.isEmpty
@@ -245,15 +258,29 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
       ingredients: ingredients,
       steps: steps,
       tags: List.from(_tags),
-      category: _category,
+      category: _categories.first,
       imageUrl: _imageUrl,
     );
 
-    ref.read(savedRecipesProvider.notifier).saveRecipe(recipe, source: 'own');
+    // Speichern und savedRecipeId direkt zurückbekommen
+    final savedId = await ref.read(savedRecipesProvider.notifier)
+        .saveRecipe(recipe, source: 'own');
+
+    // Kategorien sofort in den Provider schreiben (alle gewählten)
+    if (savedId != null) {
+      final mealTypes = _categories.map((cat) =>
+        RecipeMealType.values.firstWhere(
+          (m) => m.label == cat,
+          orElse: () => RecipeMealType.breakfast,
+        ),
+      ).toList();
+      await ref.read(recipeCategoryProvider.notifier).setCategories(savedId, mealTypes);
+    }
 
     HapticFeedback.mediumImpact();
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('â€ž${recipe.title}" gespeichert âœ…')),
+      SnackBar(content: Text('„${recipe.title}" gespeichert ✅')),
     );
     Navigator.pop(context);
   }
@@ -511,14 +538,23 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
             }),
             const SizedBox(height: 24),
 
-            // ── Kategorie (horizontaler Slider) ───────────────────────
+            // ── Kategorie (horizontaler Slider, Mehrfachauswahl, Pflicht) ──
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Kategorie',
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-                Text('optional',
+                Row(
+                  children: [
+                    Text('Kategorie',
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 4),
+                    Text('*',
+                        style: TextStyle(
+                            color: theme.colorScheme.error,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                Text('Mehrere möglich',
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: theme.colorScheme.outline)),
               ],
@@ -529,123 +565,73 @@ class _ManualRecipeScreenState extends ConsumerState<ManualRecipeScreen> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: _kCategories.map((cat) {
-                  final sel = _category == cat;
+                  final sel = _categories.contains(cat);
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
+                    child: FilterChip(
                       label: Text(cat, style: const TextStyle(fontSize: 12)),
                       selected: sel,
-                      onSelected: (_) => setState(() => _category = sel ? null : cat),
+                      onSelected: (_) => setState(() {
+                        if (sel) {
+                          _categories.remove(cat);
+                        } else {
+                          _categories.add(cat);
+                        }
+                      }),
                       visualDensity: VisualDensity.compact,
+                      showCheckmark: true,
                     ),
                   );
                 }).toList(),
               ),
             ),
+            if (_categories.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Mindestens eine Kategorie auswählen',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.error),
+                ),
+              ),
             const SizedBox(height: 24),
 
-            // ── Tags (RawAutocomplete + horizontale Chip-Zeile) ───────────
-            Text('Tags',
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            RawAutocomplete<String>(
-              textEditingController: _tagCtrl,
-              focusNode: _tagFocus,
-              optionsBuilder: (tv) {
-                final q = tv.text.toLowerCase();
-                if (q.isEmpty) {
-                  return _kSuggestedTags
-                      .where((t) => !_tags.contains(t))
-                      .take(8);
-                }
-                return _kSuggestedTags
-                    .where((t) =>
-                        !_tags.contains(t) &&
-                        t.toLowerCase().contains(q))
-                    .take(6);
-              },
-              onSelected: (t) {
-                setState(() => _tags.add(t));
-                _tagCtrl.clear();
-                _tagFocus.unfocus();
-              },
-              fieldViewBuilder: (ctx, ctrl, focus, onSubmit) => TextField(
-                controller: ctrl,
-                focusNode: focus,
-                style: theme.textTheme.bodySmall,
-                decoration: InputDecoration(
-                  hintText: 'Tag tippen oder auswählen…',
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  filled: true,
-                  fillColor: theme.colorScheme.surfaceContainerLow,
-                  prefixIcon: const Icon(Icons.label_outline_rounded, size: 18),
-                  suffixIcon: const Icon(Icons.arrow_drop_down_rounded, size: 20),
+            // ── Tags ───────────
+            Row(
+              children: [
+                Text('Tags', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 4),
+                Text('optional', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () async {
+                    final selected = await TagPickerSheet.show(
+                      context,
+                      selected: _tags,
+                      suggestions: _kSuggestedTags,
+                    );
+                    if (selected != null) setState(() { _tags.clear(); _tags.addAll(selected); });
+                  },
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  label: const Text('Tags wählen'),
                 ),
-                onSubmitted: (v) {
-                  final tag = v.trim();
-                  if (tag.isNotEmpty && !_tags.contains(tag)) {
-                    setState(() => _tags.add(tag));
-                  }
-                  _tagCtrl.clear();
-                },
-              ),
-              optionsViewBuilder: (ctx, onSel, opts) => Align(
-                alignment: Alignment.topLeft,
-                child: Material(
-                  elevation: 4,
-                  borderRadius: BorderRadius.circular(12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 200),
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      shrinkWrap: true,
-                      children: opts
-                          .map((t) => ListTile(
-                                dense: true,
-                                leading: Icon(Icons.add_rounded,
-                                    size: 16,
-                                    color: theme.colorScheme.primary),
-                                title: Text(t,
-                                    style: theme.textTheme.bodySmall),
-                                onTap: () => onSel(t),
-                              ))
-                          .toList(),
-                    ),
-                  ),
-                ),
-              ),
+              ],
             ),
-            if (_tags.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 32,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: _tags
-                      .map((t) => Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: InputChip(
-                              label: Text(t,
-                                  style: const TextStyle(fontSize: 11)),
-                              selected: true,
-                              onDeleted: () =>
-                                  setState(() => _tags.remove(t)),
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 2),
-                            ),
-                          ))
-                      .toList(),
-                ),
-              ),
-            ],
+            const SizedBox(height: 8),
+            if (_tags.isNotEmpty)
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: _tags.map((t) => Chip(
+                  label: Text(t, style: const TextStyle(fontSize: 12)),
+                  deleteIcon: const Icon(Icons.close, size: 14),
+                  visualDensity: VisualDensity.compact,
+                  onDeleted: () => setState(() => _tags.remove(t)),
+                )).toList(),
+              )
+            else
+              Text('Noch keine Tags',
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
             const SizedBox(height: 80),
           ],
         ),
@@ -860,165 +846,5 @@ class _IngredientEntry {
     required this.amountController,
     this.unit = 'g',
   });
-}
-
-// ─── Tag-Auswahl Bottom-Sheet ─────────────────────────────────────────────────
-
-class _TagPickerSheet extends StatefulWidget {
-  final List<String> selected;
-  final List<String> suggestions;
-
-  const _TagPickerSheet({
-    required this.selected,
-    required this.suggestions,
-  });
-
-  @override
-  State<_TagPickerSheet> createState() => _TagPickerSheetState();
-}
-
-class _TagPickerSheetState extends State<_TagPickerSheet> {
-  late final List<String> _selected;
-  final _customCtrl = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = List.from(widget.selected);
-  }
-
-  @override
-  void dispose() {
-    _customCtrl.dispose();
-    super.dispose();
-  }
-
-  void _addCustom() {
-    final t = _customCtrl.text.trim();
-    if (t.isNotEmpty && !_selected.contains(t)) {
-      setState(() => _selected.add(t));
-      _customCtrl.clear();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      maxChildSize: 0.92,
-      minChildSize: 0.4,
-      expand: false,
-      builder: (ctx, scrollCtrl) => Column(
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 8, 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text('Tags auswählen',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold)),
-                ),
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Abbrechen')),
-                const SizedBox(width: 4),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, _selected),
-                  child: const Text('Fertig'),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          // Eigenen Tag eingeben
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: TextField(
-              controller: _customCtrl,
-              decoration: InputDecoration(
-                hintText: 'Eigenen Tag eingeben…',
-                isDense: true,
-                prefixIcon: const Icon(Icons.edit_outlined, size: 18),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.add_circle_rounded, size: 20),
-                  onPressed: _addCustom,
-                ),
-              ),
-              textCapitalization: TextCapitalization.words,
-              onSubmitted: (_) => _addCustom(),
-            ),
-          ),
-          // Ausgewählte Tags
-          if (_selected.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Ausgewählt',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w700)),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: _selected
-                    .map((t) => InputChip(
-                          label: Text(t,
-                              style: const TextStyle(fontSize: 12)),
-                          deleteIcon:
-                              const Icon(Icons.close, size: 14),
-                          onDeleted: () =>
-                              setState(() => _selected.remove(t)),
-                          selected: true,
-                          showCheckmark: false,
-                          visualDensity: VisualDensity.compact,
-                        ))
-                    .toList(),
-              ),
-            ),
-            const Divider(indent: 16, endIndent: 16),
-          ],
-          // Vorschläge
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Vorschläge',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600)),
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              controller: scrollCtrl,
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: widget.suggestions
-                    .where((t) => !_selected.contains(t))
-                    .map((t) => ActionChip(
-                          label: Text(t,
-                              style: const TextStyle(fontSize: 12)),
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () =>
-                              setState(() => _selected.add(t)),
-                        ))
-                    .toList(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 

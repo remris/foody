@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kokomu/features/auth/presentation/auth_provider.dart';
 import 'package:kokomu/features/auth/presentation/login_screen.dart';
 import 'package:kokomu/features/auth/presentation/register_screen.dart';
+import 'package:kokomu/features/auth/presentation/reset_password_screen.dart';
 import 'package:kokomu/features/auth/presentation/forgot_password_screen.dart';
 import 'package:kokomu/features/inventory/presentation/item_detail_screen.dart';
 import 'package:kokomu/features/recipes/presentation/recipe_detail_screen.dart';
@@ -26,6 +28,7 @@ import 'package:kokomu/features/profile/presentation/profile_screen.dart';
 import 'package:kokomu/features/profile/presentation/public_profile_screen.dart';
 import 'package:kokomu/features/profile/presentation/edit_profile_screen.dart';
 import 'package:kokomu/features/profile/presentation/followers_screen.dart';
+import 'package:kokomu/features/community/presentation/community_list_screen.dart';
 import 'package:kokomu/features/pantry/presentation/pantry_shopping_screen.dart';
 import 'package:kokomu/main.dart' show onboardingCompleteProvider;
 import 'package:kokomu/models/recipe.dart' show FoodRecipe;
@@ -76,10 +79,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnRegister = loc == '/register';
       final isOnForgotPassword = loc == '/forgot-password';
       final isOnWelcome = loc == '/welcome-registered';
-      final isOnAuth = isOnLogin || isOnRegister || isOnForgotPassword || isOnWelcome;
+      final isOnAuthConfirm = loc == '/auth/confirm';
+      final isOnResetPassword = loc == '/reset-password';
+      final isOnAuth = isOnLogin || isOnRegister || isOnForgotPassword ||
+          isOnWelcome || isOnAuthConfirm || isOnResetPassword;
       final isOnboarding = loc == '/onboarding';
 
       if (isOnboarding) return null;
+      // /auth/confirm und /reset-password immer durchlassen (PKCE-Flow)
+      if (isOnAuthConfirm || isOnResetPassword) return null;
       // Nicht eingeloggt → nur Login/Register erlaubt
       if (!isLoggedIn && !isOnAuth) return '/login';
       // Eingeloggt auf Login → Home (aber Register bleibt erreichbar für neuen Account)
@@ -126,12 +134,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Deep Link von Supabase E-Mail (Bestätigung / Passwort-Reset)
       GoRoute(
         path: '/auth/confirm',
-        redirect: (context, state) {
-          // Supabase verarbeitet den Token automatisch über den Deep Link.
-          // Wir leiten einfach auf Home oder Login weiter.
-          final user = ref.read(currentUserProvider);
-          return user != null ? '/home' : '/login';
+        builder: (context, state) {
+          final code = state.uri.queryParameters['code'];
+          return _AuthConfirmHandler(code: code);
         },
+      ),
+      // Neues Passwort setzen (nach PKCE-Exchange)
+      GoRoute(
+        path: '/reset-password',
+        builder: (_, __) => const ResetPasswordScreen(),
       ),
       GoRoute(
         path: '/welcome-registered',
@@ -235,6 +246,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/community',
             redirect: (_, __) => '/discover',
           ),
+          // ── Meine Communities ──
+          GoRoute(
+            path: '/communities',
+            builder: (_, __) => const CommunityListScreen(),
+          ),
           GoRoute(
             path: '/settings',
             builder: (_, __) => const SettingsScreen(),
@@ -296,6 +312,114 @@ final routerProvider = Provider<GoRouter>((ref) {
         ref.read(onboardingCompleteProvider) ? '/home' : '/onboarding',
   );
 });
+
+/// Verarbeitet den PKCE-Code aus dem Supabase Deep-Link.
+/// Nach erfolgreichem Exchange wird zur passenden Seite navigiert:
+///  - Passwort-Reset-Flow  → /reset-password
+///  - E-Mail-Bestätigung   → /home
+class _AuthConfirmHandler extends ConsumerStatefulWidget {
+  final String? code;
+  const _AuthConfirmHandler({this.code});
+
+  @override
+  ConsumerState<_AuthConfirmHandler> createState() =>
+      _AuthConfirmHandlerState();
+}
+
+class _AuthConfirmHandlerState extends ConsumerState<_AuthConfirmHandler> {
+  bool _processing = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _handleCode();
+  }
+
+  Future<void> _handleCode() async {
+    final code = widget.code;
+    if (code == null || code.isEmpty) {
+      // Kein Code → direkt weiterleiten
+      if (mounted) _navigate();
+      return;
+    }
+    try {
+      await Supabase.instance.client.auth.exchangeCodeForSession(code);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+      return;
+    }
+    if (mounted) _navigate();
+  }
+
+  void _navigate() {
+    // Prüfen ob wir im Password-Recovery-Flow sind
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      // Password-Recovery Event kommt manchmal erst danach –
+      // wir leiten generell zu /reset-password weiter wenn Code vorhanden
+      context.go(widget.code != null ? '/reset-password' : '/home');
+    } else {
+      context.go('/login');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (_error != null) {
+      return Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  'Link ungültig oder abgelaufen',
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Bitte fordere einen neuen Passwort-Reset-Link an.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () => context.go('/forgot-password'),
+                  child: const Text('Neuen Link anfordern'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Wird verarbeitet…',
+              style: theme.textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _AuthRedirectNotifier extends ChangeNotifier {
   final Ref _ref;

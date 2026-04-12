@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kokomu/core/services/notification_service.dart';
@@ -6,6 +5,7 @@ import 'package:kokomu/core/services/profanity_filter.dart';
 import 'package:kokomu/core/services/supabase_service.dart';
 import 'package:kokomu/features/auth/presentation/auth_provider.dart';
 import 'package:kokomu/features/household/presentation/household_provider.dart';
+import 'package:kokomu/features/profile/presentation/profile_provider.dart';
 import 'package:kokomu/models/household.dart';
 
 // ── Modell ────────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ const kQuickMessages = [
 
 class HouseholdChatNotifier
     extends AsyncNotifier<List<HouseholdMessage>> {
-  StreamSubscription<dynamic>? _realtimeSub;
+  RealtimeChannel? _channel;
 
   @override
   Future<List<HouseholdMessage>> build() async {
@@ -90,7 +90,14 @@ class HouseholdChatNotifier
     if (household == null) return [];
 
     _subscribeRealtime(household.id);
-    ref.onDispose(() => _realtimeSub?.cancel());
+
+    // Channel beim Dispose sauber abmelden
+    ref.onDispose(() {
+      if (_channel != null) {
+        SupabaseService.client.removeChannel(_channel!);
+        _channel = null;
+      }
+    });
 
     return _fetchMessages(household.id);
   }
@@ -111,13 +118,16 @@ class HouseholdChatNotifier
     }
   }
 
-  // Temp-IDs von optimistisch gesendeten Nachrichten verfolgen
-  final Set<String> _pendingContents = {};
-
   void _subscribeRealtime(String householdId) {
-    _realtimeSub?.cancel();
-    SupabaseService.client
-        .channel('household_chat_$householdId')
+    // Alten Channel sauber entfernen
+    if (_channel != null) {
+      SupabaseService.client.removeChannel(_channel!);
+      _channel = null;
+    }
+
+    // Eindeutiger Channel-Name verhindert Duplikate
+    _channel = SupabaseService.client
+        .channel('household_chat_${householdId}_${DateTime.now().millisecondsSinceEpoch}')
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
@@ -129,15 +139,14 @@ class HouseholdChatNotifier
           ),
           callback: (payload) async {
             final newMsg = HouseholdMessage.fromJson(
-                payload.newRecord as Map<String, dynamic>);
+                payload.newRecord);
             final current = state.valueOrNull ?? [];
 
-            // Bereits vorhanden (echte ID)?
+            // Bereits vorhanden (echte UUID)?
             if (current.any((m) => m.id == newMsg.id)) return;
 
-            // Eigene optimistisch eingefügte Nachricht ersetzen
+            // Eigene optimistisch eingefügte Nachricht (temp-ID) ersetzen
             if (newMsg.isFromCurrentUser) {
-              // temp-Eintrag mit gleichem Inhalt entfernen und durch echte ersetzen
               final withoutTemp = current
                   .where((m) => !(m.id.length <= 15 && m.content == newMsg.content))
                   .toList();
@@ -182,6 +191,17 @@ class HouseholdChatNotifier
       ),
     );
 
+    // Spitzname bevorzugen: household_members.display_name
+    // → dann ownProfile.householdNickname → dann ownProfile.displayName → email
+    final ownProfile = ref.read(ownProfileProvider).valueOrNull;
+    final senderName = (me.displayName != null && me.displayName!.isNotEmpty)
+        ? me.displayName!
+        : (ownProfile?.householdNickname?.isNotEmpty == true)
+            ? ownProfile!.householdNickname!
+            : (ownProfile?.displayName.isNotEmpty == true)
+                ? ownProfile!.displayName
+                : user.email?.split('@').first ?? 'Ich';
+
     // temp-ID: kurze numerische Zeichenkette (max 15 Zeichen)
     final tempId = '${DateTime.now().millisecondsSinceEpoch % 100000}';
 
@@ -189,7 +209,7 @@ class HouseholdChatNotifier
       id: tempId,
       householdId: household.id,
       userId: user.id,
-      senderName: me.displayName ?? user.email?.split('@').first ?? 'Ich',
+      senderName: senderName,
       content: content,
       emoji: emoji,
       createdAt: DateTime.now(),
@@ -203,10 +223,17 @@ class HouseholdChatNotifier
       await SupabaseService.client
           .from('household_messages')
           .insert(msg.toJson());
-      // Realtime ersetzt den temp-Eintrag via Callback oben
-    } catch (e) {
-      // Rollback
+      // Kurz warten – wenn Realtime innerhalb 800ms feuert, hat er schon ersetzt.
+      // Danach laden wir neu als Fallback (Realtime ggf. nicht aktiviert).
+      await Future.delayed(const Duration(milliseconds: 800));
+      final fresh = await _fetchMessages(household.id);
+      state = AsyncData(fresh);
+    } catch (e, st) {
+      // Rollback der optimistischen Nachricht
       state = AsyncData(current);
+      // Detailliertes Logging damit der Fehler sichtbar wird
+      // ignore: avoid_print
+      print('[HouseholdChat] sendMessage Fehler: $e\n$st');
       rethrow;
     }
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomu/features/community/presentation/community_meal_plan_provider.dart';
 import 'package:kokomu/features/meal_plan/presentation/meal_plan_provider.dart';
+import 'package:kokomu/widgets/tag_picker_sheet.dart';
 
 /// Sheet zum Teilen des aktuellen Wochenplans in der Community.
 class PublishMealPlanSheet extends ConsumerStatefulWidget {
@@ -32,8 +33,6 @@ class PublishMealPlanSheet extends ConsumerStatefulWidget {
 class _PublishMealPlanSheetState extends ConsumerState<PublishMealPlanSheet> {
   final _titleCtrl = TextEditingController();
   final _descCtrl  = TextEditingController();
-  final _tagCtrl   = TextEditingController();
-  final _tagFocus  = FocusNode();
   final List<String> _selectedTags = [];
   String? _selectedCategory;
 
@@ -62,8 +61,6 @@ class _PublishMealPlanSheetState extends ConsumerState<PublishMealPlanSheet> {
   void dispose() {
     _titleCtrl.dispose();
     _descCtrl.dispose();
-    _tagCtrl.dispose();
-    _tagFocus.dispose();
     super.dispose();
   }
 
@@ -282,118 +279,40 @@ class _PublishMealPlanSheetState extends ConsumerState<PublishMealPlanSheet> {
                   const SizedBox(height: 20),
 
                   // Tags
-                  Text(
-                    'Tags',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Row(
+                    children: [
+                      Text('Tags', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 4),
+                      Text('optional', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final selected = await TagPickerSheet.show(
+                            context,
+                            selected: _selectedTags,
+                            suggestions: _suggestedTags,
+                          );
+                          if (selected != null) setState(() { _selectedTags.clear(); _selectedTags.addAll(selected); });
+                        },
+                        icon: const Icon(Icons.add_rounded, size: 16),
+                        label: const Text('Tags wählen'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
-                  // Autocomplete
-                  RawAutocomplete<String>(
-                    textEditingController: _tagCtrl,
-                    focusNode: _tagFocus,
-                    optionsBuilder: (tv) {
-                      final q = tv.text.toLowerCase();
-                      if (q.isEmpty) {
-                        return _suggestedTags
-                            .where((t) => !_selectedTags.contains(t))
-                            .take(8);
-                      }
-                      return _suggestedTags
-                          .where((t) =>
-                              !_selectedTags.contains(t) &&
-                              t.toLowerCase().contains(q))
-                          .take(6);
-                    },
-                    onSelected: (t) {
-                      setState(() => _selectedTags.add(t));
-                      _tagCtrl.clear();
-                      _tagFocus.unfocus();
-                    },
-                    fieldViewBuilder: (ctx, ctrl, focus, onSubmit) => TextField(
-                      controller: ctrl,
-                      focusNode: focus,
-                      style: theme.textTheme.bodySmall,
-                      decoration: InputDecoration(
-                        labelText: 'Tags hinzufügen',
-                        hintText: 'Tippen oder auswählen…',
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        filled: true,
-                        fillColor: theme.colorScheme.surfaceContainerLow,
-                        prefixIcon: const Icon(Icons.label_outline_rounded,
-                            size: 18),
-                        suffixIcon: const Icon(
-                            Icons.arrow_drop_down_rounded,
-                            size: 20),
-                      ),
-                      onSubmitted: (v) {
-                        final tag = v.trim();
-                        if (tag.isNotEmpty && !_selectedTags.contains(tag)) {
-                          setState(() => _selectedTags.add(tag));
-                        }
-                        _tagCtrl.clear();
-                      },
-                    ),
-                    optionsViewBuilder: (ctx, onSel, opts) => Align(
-                      alignment: Alignment.topLeft,
-                      child: Material(
-                        elevation: 4,
-                        borderRadius: BorderRadius.circular(12),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 200),
-                          child: ListView(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            shrinkWrap: true,
-                            children: opts
-                                .map((t) => ListTile(
-                                      dense: true,
-                                      leading: Icon(Icons.add_rounded,
-                                          size: 16,
-                                          color: theme.colorScheme.primary),
-                                      title: Text(t,
-                                          style: theme.textTheme.bodySmall),
-                                      onTap: () => onSel(t),
-                                    ))
-                                .toList(),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Aktive Tags – horizontale Scroll-Zeile
-                  if (_selectedTags.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 32,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: _selectedTags
-                            .map((t) => Padding(
-                                  padding: const EdgeInsets.only(right: 6),
-                                  child: InputChip(
-                                    label: Text(t),
-                                    labelStyle:
-                                        const TextStyle(fontSize: 11),
-                                    selected: true,
-                                    onDeleted: () => setState(
-                                        () => _selectedTags.remove(t)),
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 2),
-                                  ),
-                                ))
-                            .toList(),
-                      ),
-                    ),
-                  ],
+                  if (_selectedTags.isNotEmpty)
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: _selectedTags.map((t) => Chip(
+                        label: Text(t, style: const TextStyle(fontSize: 12)),
+                        deleteIcon: const Icon(Icons.close, size: 14),
+                        visualDensity: VisualDensity.compact,
+                        onDeleted: () => setState(() => _selectedTags.remove(t)),
+                      )).toList(),
+                    )
+                  else
+                    Text('Noch keine Tags', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
                   const SizedBox(height: 24),
 
                   // Hinweis

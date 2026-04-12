@@ -1374,11 +1374,15 @@ class _InlineChatTabState extends ConsumerState<_InlineChatTab> {
           ),
         );
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Nachricht konnte nicht gesendet werden')),
+          SnackBar(
+            content: Text('Fehler: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 6),
+          ),
         );
       }
     } finally {
@@ -1880,10 +1884,15 @@ class _HouseholdChatScreenState
           ),
         );
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nachricht konnte nicht gesendet werden')),
+          SnackBar(
+            content: Text('Fehler: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 6),
+          ),
         );
       }
     } finally {

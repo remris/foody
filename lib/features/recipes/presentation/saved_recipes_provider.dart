@@ -16,13 +16,14 @@ class SavedRecipesNotifier extends AsyncNotifier<List<FoodRecipe>> {
     return ref.read(savedRecipeRepositoryProvider).getSavedRecipes(userId);
   }
 
-  Future<void> saveRecipe(FoodRecipe recipe, {String source = 'ai'}) async {
+  Future<String?> saveRecipe(FoodRecipe recipe, {String source = 'ai'}) async {
     final userId = ref.read(currentUserProvider)?.id;
-    if (userId == null) return;
-    await ref.read(savedRecipeRepositoryProvider).saveRecipe(userId, recipe, source: source);
+    if (userId == null) return null;
+    final savedId = await ref.read(savedRecipeRepositoryProvider).saveRecipe(userId, recipe, source: source);
     // Reload
     state = AsyncData(
         await ref.read(savedRecipeRepositoryProvider).getSavedRecipes(userId));
+    return savedId;
   }
 
   Future<void> deleteRecipe(String id) async {

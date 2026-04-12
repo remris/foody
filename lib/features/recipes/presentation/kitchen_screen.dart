@@ -208,9 +208,21 @@ class _SavedTabState extends ConsumerState<_SavedTab> {
       filtered = filtered.where((r) => favorites.contains(r.id)).toList();
     }
     if (_categoryFilter != null) {
-      final categories = ref.read(recipeCategoryProvider);
-      filtered =
-          filtered.where((r) => categories[r.id] == _categoryFilter).toList();
+      final catNotifier = ref.read(recipeCategoryProvider.notifier);
+      filtered = filtered.where((r) {
+        final key = r.savedRecipeId ?? r.id;
+        // 1. Multi-Kategorien aus Provider (manual_recipe + edit)
+        final cats = catNotifier.getCategories(key);
+        if (cats.contains(_categoryFilter)) return true;
+        // 2. recipe.category String-Fallback (direkt im Modell gespeichert)
+        if (r.category != null && r.category!.isNotEmpty) {
+          final fromStr = RecipeMealType.values.where(
+            (m) => m.label == r.category,
+          ).firstOrNull;
+          if (fromStr == _categoryFilter) return true;
+        }
+        return false;
+      }).toList();
     }
     if (_cookingTimeFilter != null) {
       filtered = filtered.where((r) {

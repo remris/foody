@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomu/features/auth/presentation/auth_provider.dart';
+import 'package:kokomu/features/household/presentation/household_provider.dart';
 import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
 import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
 import 'package:kokomu/models/inventory_item.dart';
+import 'package:kokomu/models/shopping_list.dart';
 import 'package:kokomu/models/shopping_list_item.dart';
 
 /// Sheet zur Übernahme abgehakter Einkaufslisteneinträge ins Inventar.
 class TransferToInventorySheet extends ConsumerStatefulWidget {
   final List<ShoppingListItem> checkedItems;
-  const TransferToInventorySheet({super.key, required this.checkedItems});
+  /// Die Quell-Liste – bestimmt ob Haushalt- oder Privat-Vorrat
+  final ShoppingList? sourceList;
+  const TransferToInventorySheet({
+    super.key,
+    required this.checkedItems,
+    this.sourceList,
+  });
 
   @override
   ConsumerState<TransferToInventorySheet> createState() =>
@@ -25,10 +33,26 @@ class _TransferToInventorySheetState
     setState(() => _isLoading = true);
 
     final userId = ref.read(currentUserProvider)?.id ?? '';
+    final household = ref.read(householdProvider).valueOrNull;
+
+    // householdId bestimmen:
+    // - Wenn Quell-Liste eine Haushaltsliste ist → immer Haushalt-Vorrat
+    // - Wenn User in Haushalt ist (kein persönliches Budget) → Haushalt-Vorrat
+    // - Wenn Quell-Liste privat ist → privater Vorrat (null)
+    String? householdId;
+    if (widget.sourceList?.householdId != null) {
+      // Haushaltsliste → Haushalt-Vorrat
+      householdId = widget.sourceList!.householdId;
+    } else if (household != null) {
+      // User ist in Haushalt, private Liste → trotzdem Haushalt (User-Entscheid)
+      householdId = household.id;
+    }
+
     final items = widget.checkedItems.map((shopItem) {
       return InventoryItem(
         id: '',
         userId: userId,
+        householdId: householdId,
         ingredientId: DateTime.now().millisecondsSinceEpoch.toString(),
         ingredientName: shopItem.name,
         quantity: double.tryParse(shopItem.quantity ?? ''),
@@ -36,12 +60,10 @@ class _TransferToInventorySheetState
       );
     }).toList();
 
-    // Batch-Insert ins Inventar
     for (final item in items) {
       await ref.read(inventoryProvider.notifier).addItem(item);
     }
 
-    // Abgehakte Items von Einkaufsliste entfernen
     if (_removeAfterTransfer) {
       await ref.read(shoppingListProvider.notifier).clearChecked();
     }
@@ -51,7 +73,7 @@ class _TransferToInventorySheetState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${items.length} Artikel ins Inventar übernommen',
+            '${items.length} Artikel ins ${householdId != null ? 'Haushalt-' : ''}Inventar übernommen',
           ),
         ),
       );

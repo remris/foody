@@ -586,28 +586,55 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
       final categories = ref.read(recipeCategoryProvider);
       final ratings = ref.read(recipeRatingProvider);
 
-      // Rezepte filtern wenn Präferenzen gewählt
+      // Rezepte filtern wenn Präferenzen gewählt.
+      // WICHTIG: Wenn zu wenig Rezepte passen, lieber Slots leer lassen
+      // als komplett falsche Rezepte reinfüllen.
       var pool = List<FoodRecipe>.from(allSaved);
       if (preferences.isNotEmpty) {
-        final prefLower = preferences.map((p) => p.toLowerCase()).toList();
-        // Filtern nach Tags in Titel/Beschreibung
-        final filtered = pool.where((r) {
-          final text = '${r.title} ${r.description}'.toLowerCase();
-          return prefLower.any((p) {
-            if (p == 'vegetarisch') return !_hasMeat(text);
-            if (p == 'vegan') return !_hasMeat(text) && !_hasDairy(text);
-            if (p == 'glutenfrei') return !text.contains('nudel') && !text.contains('mehl') && !text.contains('brot');
-            return text.contains(p) || r.title.toLowerCase().contains(p);
+        final prefLower = preferences.map((p) => p.toLowerCase()).toSet();
+        pool = pool.where((r) {
+          final text = '${r.title} ${r.description} ${(r.tags ?? []).join(' ')}'.toLowerCase();
+          // Jede gewählte Präferenz muss erfüllt sein (AND-Logik)
+          return prefLower.every((p) {
+            switch (p) {
+              case 'vegetarisch':
+                return !_hasMeat(text);
+              case 'vegan':
+                return !_hasMeat(text) && !_hasDairy(text);
+              case 'pescetarisch':
+                // Kein Fleisch (außer Fisch ist erlaubt) → kein Geflügel/Rind/Schwein
+                return !_hasMeat(text) || _hasOnlyFish(text);
+              case 'glutenfrei':
+                return !text.contains('nudel') && !text.contains('mehl') &&
+                       !text.contains('brot') && !text.contains('pasta') &&
+                       !text.contains('weizenmehl');
+              case 'laktosefrei':
+                return !_hasDairy(text);
+              case 'keto':
+                return !text.contains('nudel') && !text.contains('reis') &&
+                       !text.contains('brot') && !text.contains('kartoffel') &&
+                       !text.contains('zucker');
+              case 'zuckerarm':
+                return !text.contains('zucker') && !text.contains('honig') &&
+                       !text.contains('sirup') && !text.contains('süß');
+              default:
+                // Bei allen anderen (High Protein, Fitness etc.) → Tag oder Titel muss passen
+                // Kein harter Ausschluss, da wir keine negativen Kriterien kennen
+                return true;
+            }
           });
         }).toList();
-        // Nur gefilterten Pool verwenden wenn genug Rezepte da sind
-        if (filtered.length >= 7) pool = filtered;
+        // Pool immer nutzen – auch wenn klein. Leere Slots sind besser als falsche Rezepte.
+        // Nur wenn Pool komplett leer ist → auf alle Rezepte zurückfallen und warnen
+        if (pool.isEmpty) pool = List<FoodRecipe>.from(allSaved);
       }
 
       // Rezepte nach Rating sortieren (bessere zuerst), dann shufflen
       pool.sort((a, b) {
-        final rA = ratings[a.id] ?? 0;
-        final rB = ratings[b.id] ?? 0;
+        final idA = a.savedRecipeId ?? a.id;
+        final idB = b.savedRecipeId ?? b.id;
+        final rA = ratings[idA] ?? 0;
+        final rB = ratings[idB] ?? 0;
         return rB.compareTo(rA);
       });
       // Gewichtetes Mischen: Top-Hälfte bleibt vorne
@@ -616,42 +643,26 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
       pool = [...topHalf, ...bottomHalf];
 
       // Rezepte nach Mahlzeit-Typ in separate Queues aufteilen
-      // Queue = Liste die wir der Reihe nach abarbeiten, ohne Wiederholung
-      final breakfastQueue = pool.where((r) => categories[r.id] == RecipeMealType.breakfast).toList();
-      final lunchQueue     = pool.where((r) => categories[r.id] == RecipeMealType.lunch).toList();
-      final dinnerQueue    = pool.where((r) => categories[r.id] == RecipeMealType.dinner).toList();
-      final uncategorized  = pool.where((r) => categories[r.id] == null).toList();
+      // WICHTIG: Key ist savedRecipeId (so wie setCategory speichert)
+      String _key(FoodRecipe r) => r.savedRecipeId ?? r.id;
+      final breakfastQueue = pool.where((r) => categories[_key(r)] == RecipeMealType.breakfast).toList();
+      final lunchQueue     = pool.where((r) => categories[_key(r)] == RecipeMealType.lunch).toList();
+      final dinnerQueue    = pool.where((r) => categories[_key(r)] == RecipeMealType.dinner).toList();
+      // Unkategorisierte nur für Mittagessen/Abendessen verwenden – NIE für Frühstück
+      final uncategorized  = pool.where((r) => categories[_key(r)] == null).toList();
 
-      // Hilfsfunktion: nächstes nicht-wiederholtes Rezept oder null
-      // Jede Queue wird einmalig durchlaufen – kein zyklisches Wrap-around
-      FoodRecipe? takeNext(List<FoodRecipe> queue, Set<String> usedIds) {
-        // Bevorzugt: aus der spezifischen Queue
+      // Hilfsfunktion: nächstes nicht-wiederholtes Rezept aus einer Queue
+      FoodRecipe? takeFrom(List<FoodRecipe> queue, Set<String> usedIds) {
         for (final r in queue) {
-          if (!usedIds.contains(r.id)) {
-            usedIds.add(r.id);
+          final key = _key(r);
+          if (!usedIds.contains(key)) {
+            usedIds.add(key);
             return r;
           }
         }
-        // Fallback: aus unkategorisierten
-        for (final r in uncategorized) {
-          if (!usedIds.contains(r.id)) {
-            usedIds.add(r.id);
-            return r;
-          }
-        }
-        // Fallback 2: aus dem gesamten Pool (wenn sehr wenige Rezepte)
-        for (final r in pool) {
-          if (!usedIds.contains(r.id)) {
-            usedIds.add(r.id);
-            return r;
-          }
-        }
-        // Pool erschöpft → Slot bleibt leer
         return null;
       }
 
-      // Pro Tag eigene usedIds → kein Duplikat am selben Tag
-      // Global-Set über alle Tage → kein Duplikat in der gesamten Woche (wenn möglich)
       final weekUsedIds = <String>{};
 
       // Plan aufbauen: 7 Tage × 3 Slots
@@ -659,44 +670,75 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
       for (int day = 0; day < 7; day++) {
         final dayUsedIds = <String>{};
         for (final slot in [MealSlot.breakfast, MealSlot.lunch, MealSlot.dinner]) {
-          final queue = switch (slot) {
-            MealSlot.breakfast => breakfastQueue,
-            MealSlot.lunch     => lunchQueue,
-            _                  => dinnerQueue,
-          };
-          // Kombiniertes Set: kein Duplikat am Tag UND in der Woche bevorzugt
           final combinedUsed = {...weekUsedIds, ...dayUsedIds};
-          final recipe = takeNext(queue, combinedUsed);
+          FoodRecipe? recipe;
+
+          if (slot == MealSlot.breakfast) {
+            // Frühstück: NUR aus der Frühstücks-Queue – kein Fallback auf andere Kategorien
+            recipe = takeFrom(breakfastQueue, combinedUsed);
+          } else if (slot == MealSlot.lunch) {
+            // Mittag: Mittagessen-Queue, dann unkategorisiert
+            recipe = takeFrom(lunchQueue, combinedUsed)
+                ?? takeFrom(uncategorized, combinedUsed);
+          } else {
+            // Abendessen-Queue, dann unkategorisiert
+            recipe = takeFrom(dinnerQueue, combinedUsed)
+                ?? takeFrom(uncategorized, combinedUsed);
+          }
+
           if (recipe != null) {
-            // Nur zum Wochen-Set hinzufügen wenn noch nicht drin
-            weekUsedIds.add(recipe.id);
-            dayUsedIds.add(recipe.id);
+            weekUsedIds.add(_key(recipe));
+            dayUsedIds.add(_key(recipe));
             entries.add((dayIndex: day, slot: slot, recipe: recipe));
-            // Aus den Queues entfernen damit nicht nochmal gezogen wird
             breakfastQueue.remove(recipe);
             lunchQueue.remove(recipe);
             dinnerQueue.remove(recipe);
+            uncategorized.remove(recipe);
           }
-          // Bei null: Slot bleibt einfach leer → kein Entry
+          // Bei null: Slot bleibt leer – lieber leer als falsches Rezept
         }
       }
 
       if (!mounted) return;
 
-      // Vorschau-BottomSheet: User sieht Plan und kann ihn direkt speichern
-      final confirmed = await _showPlanPreviewSheet(entries, preferences);
-      if (!mounted || !confirmed) return;
+      // Vorschau-BottomSheet: User sieht Plan, kann Einträge entfernen und dann speichern
+      final finalEntries = await _showPlanPreviewSheet(entries, preferences);
+      if (!mounted || finalEntries == null) return;
 
-      await ref.read(mealPlanProvider.notifier).clearAll();
-      for (final e in entries) {
-        await ref.read(mealPlanProvider.notifier).setMeal(e.dayIndex, e.slot, e.recipe);
-      }
+      // ── Als neuer Draft in "Meine Pläne" speichern ──────────────────────
+      // Aktuellen aktiven Plan NICHT überschreiben!
+      final prefText = preferences.isNotEmpty ? ' · ${preferences.join(', ')}' : '';
+      final now = DateTime.now();
+      final planTitle = 'KI-Plan ${now.day}.${now.month}.${now.year}$prefText';
+
+      final planJson = finalEntries.map((e) => MealPlanEntry(
+        id: '${e.dayIndex}_${e.slot.name}',
+        dayIndex: e.dayIndex,
+        slot: e.slot,
+        recipe: e.recipe,
+      ).toJson()).toList();
+
+      final repo = ref.read(communityMealPlanRepositoryProvider);
+      await repo.savePlanAsDraft(
+        title: planTitle,
+        planJson: planJson,
+        description: preferences.isNotEmpty
+            ? 'KI-generierter Plan · ${preferences.join(', ')}'
+            : 'KI-generierter Wochenplan',
+        tags: preferences,
+      );
+      ref.invalidate(myAllMealPlansProvider);
 
       if (!mounted) return;
       HapticFeedback.heavyImpact();
-      final prefText = preferences.isNotEmpty ? ' · ${preferences.join(', ')}' : '';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('✅ Wochenplan gespeichert$prefText')),
+        SnackBar(
+          content: Text('✅ Plan „$planTitle" unter Meine Pläne gespeichert'),
+          action: SnackBarAction(
+            label: 'Ansehen',
+            onPressed: () => context.push('/profile'),
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -715,24 +757,31 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   }
 
   bool _hasMeat(String text) =>
-      ['fleisch', 'hähnchen', 'huhn', 'rind', 'schwein', 'wurst', 'speck',
-       'lachs', 'thunfisch', 'fisch', 'steak', 'hackfleisch', 'chicken',
-       'beef', 'pork', 'bacon', 'meat'].any(text.contains);
+      ['hähnchen', 'huhn', 'rind', 'schwein', 'wurst', 'speck',
+       'steak', 'hackfleisch', 'chicken', 'beef', 'pork',
+       'bacon', 'lammfleisch', 'kalb', 'wild', 'truthahn',
+       'fleisch'].any(text.contains);
+
+  /// Fisch/Meeresfrüchte sind vorhanden (für Pescetarisch)
+  bool _hasOnlyFish(String text) =>
+      ['lachs', 'thunfisch', 'fisch', 'garnele', 'shrimp', 'scholle',
+       'forelle', 'makrele', 'kabeljau', 'hering', 'sardine',
+       'meeresfrüchte', 'seafood'].any(text.contains) && !_hasMeat(text);
 
   bool _hasDairy(String text) =>
       ['milch', 'käse', 'butter', 'sahne', 'joghurt', 'quark', 'rahm',
        'milk', 'cheese', 'cream', 'yogurt', 'dairy'].any(text.contains);
 
   /// Vollständige Vorschau des generierten Plans als BottomSheet.
-  /// Gibt true zurück wenn der User den Plan speichern möchte.
-  Future<bool> _showPlanPreviewSheet(
-    List<({int dayIndex, MealSlot slot, FoodRecipe recipe})> entries,
+  /// Gibt die (ggf. editierte) Entry-Liste zurück, oder null wenn abgebrochen.
+  Future<List<({int dayIndex, MealSlot slot, FoodRecipe recipe})>?> _showPlanPreviewSheet(
+    List<({int dayIndex, MealSlot slot, FoodRecipe recipe})> initialEntries,
     List<String> preferences,
   ) async {
-    final dayNames = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-    // Leere Slots ermitteln (21 mögliche Slots - tatsächlich belegte)
-    final emptySlots = 21 - entries.length;
-    final result = await showModalBottomSheet<bool>(
+    const dayNames = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+    const allSlots = [MealSlot.breakfast, MealSlot.lunch, MealSlot.dinner];
+
+    return showModalBottomSheet<List<({int dayIndex, MealSlot slot, FoodRecipe recipe})>>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -740,239 +789,267 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        final theme = Theme.of(ctx);
-        return DraggableScrollableSheet(
-          initialChildSize: 0.85,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          expand: false,
-          builder: (ctx, scrollController) => Column(
-            children: [
-              // Handle
-              Padding(
-                padding: const EdgeInsets.only(top: 12, bottom: 4),
-                child: Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
+        // Lokaler State im Sheet
+        var entries = List<({int dayIndex, MealSlot slot, FoodRecipe recipe})>.from(initialEntries);
+
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final theme = Theme.of(ctx);
+            final emptySlots = 21 - entries.length;
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.85,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              expand: false,
+              builder: (ctx, scrollController) => Column(
+                children: [
+                  // Handle
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12, bottom: 4),
+                    child: Container(
+                      width: 40, height: 4,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primaryContainer,
+                        color: theme.colorScheme.outlineVariant,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.auto_awesome_rounded,
+                              size: 20, color: theme.colorScheme.onPrimaryContainer),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Dein Wochenplan',
+                                  style: theme.textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold)),
+                              if (preferences.isNotEmpty)
+                                Text(preferences.join(' · '),
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.primary,
+                                        fontWeight: FontWeight.w600))
+                              else
+                                Text('Basierend auf deinen gespeicherten Rezepten',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(ctx, null),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  // Hinweis leere Slots
+                  if (emptySlots > 0)
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.auto_awesome_rounded,
-                          size: 20, color: theme.colorScheme.onPrimaryContainer),
-                    ),
-                    const SizedBox(width: 12),
-                        Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          Text('Dein Wochenplan',
-                              style: theme.textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.bold)),
-                          if (preferences.isNotEmpty)
-                            Text(preferences.join(' · '),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.primary,
-                                    fontWeight: FontWeight.w600))
-                          else
-                            Text('Basierend auf deinen gespeicherten Rezepten',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant)),
+                          Icon(Icons.info_outline_rounded, size: 16,
+                              color: theme.colorScheme.onTertiaryContainer),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              preferences.isNotEmpty
+                                  ? '$emptySlots Slot${emptySlots > 1 ? 's' : ''} leer – '
+                                    'zu wenig Rezepte passend zu: ${preferences.join(', ')}.'
+                                  : '$emptySlots Slot${emptySlots > 1 ? 's' : ''} leer – '
+                                    'nicht genug Rezepte für alle 21 Slots.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onTertiaryContainer),
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.pop(ctx, false),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              // Info bei leeren Slots
-              if (emptySlots > 0)
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(ctx).colorScheme.tertiaryContainer.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline_rounded, size: 16,
-                          color: Theme.of(ctx).colorScheme.onTertiaryContainer),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          preferences.isNotEmpty
-                              ? '$emptySlots Slot${emptySlots > 1 ? 's' : ''} leer – '
-                                'zu wenig Rezepte passend zu: ${preferences.join(', ')}.'
-                              : '$emptySlots Slot${emptySlots > 1 ? 's' : ''} leer – '
-                                'nicht genug verschiedene Rezepte für alle ${21} Slots.',
-                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(ctx).colorScheme.onTertiaryContainer),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                  itemCount: 7,
-                  itemBuilder: (ctx, dayIndex) {
-                    final dayEntries = entries
-                        .where((e) => e.dayIndex == dayIndex)
-                        .toList()
-                      ..sort((a, b) => a.slot.index.compareTo(b.slot.index));
-                    final allSlots = [MealSlot.breakfast, MealSlot.lunch, MealSlot.dinner];
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // Hinweis: Tippen zum Entfernen
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                    child: Row(
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
-                          child: Text(
-                            dayNames[dayIndex],
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
+                        Icon(Icons.touch_app_outlined, size: 14,
+                            color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Tippe auf 🗑 um einen Eintrag zu entfernen',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant),
                         ),
-                        ...allSlots.map((slot) {
-                          final entry = dayEntries.where((e) => e.slot == slot).firstOrNull;
-                          if (entry != null) {
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 6),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
-                                child: Row(
-                                  children: [
-                                    Text(entry.slot.emoji,
-                                        style: const TextStyle(fontSize: 20)),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            entry.slot.label,
-                                            style: theme.textTheme.labelSmall?.copyWith(
-                                              color: theme.colorScheme.onSurfaceVariant,
-                                            ),
-                                          ),
-                                          Text(
-                                            entry.recipe.title,
-                                            style: theme.textTheme.bodyMedium
-                                                ?.copyWith(fontWeight: FontWeight.w600),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (entry.recipe.cookingTimeMinutes > 0)
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.timer_outlined,
-                                              size: 13,
-                                              color: theme.colorScheme.onSurfaceVariant),
-                                          const SizedBox(width: 3),
-                                          Text(
-                                            '${entry.recipe.cookingTimeMinutes} Min.',
-                                            style: theme.textTheme.labelSmall?.copyWith(
-                                              color: theme.colorScheme.onSurfaceVariant,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                  ],
+                      ],
+                    ),
+                  ),
+                  // Plan-Liste
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                      itemCount: 7,
+                      itemBuilder: (ctx, dayIndex) {
+                        final dayEntries = entries
+                            .where((e) => e.dayIndex == dayIndex)
+                            .toList()
+                          ..sort((a, b) => a.slot.index.compareTo(b.slot.index));
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
+                              child: Text(
+                                dayNames[dayIndex],
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: theme.colorScheme.primary,
                                 ),
                               ),
-                            );
-                          } else {
-                            // Leerer Slot
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 6),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                    color: theme.colorScheme.outlineVariant,
-                                    style: BorderStyle.solid),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Text(slot.emoji,
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          color: theme.colorScheme.outlineVariant)),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    '${slot.label} – kein Rezept verfügbar',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                        color: theme.colorScheme.outlineVariant,
-                                        fontStyle: FontStyle.italic),
+                            ),
+                            ...allSlots.map((slot) {
+                              final entry = dayEntries
+                                  .where((e) => e.slot == slot)
+                                  .firstOrNull;
+                              if (entry != null) {
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
+                                    child: Row(
+                                      children: [
+                                        Text(slot.emoji,
+                                            style: const TextStyle(fontSize: 18)),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(slot.label,
+                                                  style: theme.textTheme.labelSmall?.copyWith(
+                                                      color: theme.colorScheme.onSurfaceVariant)),
+                                              Text(entry.recipe.title,
+                                                  style: theme.textTheme.bodyMedium
+                                                      ?.copyWith(fontWeight: FontWeight.w600),
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis),
+                                            ],
+                                          ),
+                                        ),
+                                        if (entry.recipe.cookingTimeMinutes > 0)
+                                          Text('${entry.recipe.cookingTimeMinutes} Min.',
+                                              style: theme.textTheme.labelSmall?.copyWith(
+                                                  color: theme.colorScheme.onSurfaceVariant)),
+                                        // Entfernen-Button
+                                        IconButton(
+                                          icon: Icon(Icons.delete_outline_rounded,
+                                              size: 18,
+                                              color: theme.colorScheme.error.withValues(alpha: 0.7)),
+                                          tooltip: 'Entfernen',
+                                          onPressed: () => setSheetState(() {
+                                            entries = entries
+                                                .where((e) =>
+                                                    !(e.dayIndex == entry.dayIndex &&
+                                                      e.slot == entry.slot))
+                                                .toList();
+                                          }),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ],
-                              ),
-                            );
-                          }
-                        }),
-                        if (dayIndex < 6)
-                          const Divider(height: 8, indent: 4, endIndent: 4),
-                      ],
-                    );
-                  },
-                ),
-              ),
-              // Aktions-Buttons
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          icon: const Icon(Icons.close_rounded, size: 18),
-                          label: const Text('Verwerfen'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: FilledButton.icon(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          icon: const Icon(Icons.save_rounded, size: 18),
-                          label: const Text('Plan speichern'),
-                        ),
-                      ),
-                    ],
+                                );
+                              } else {
+                                // Leerer Slot
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                        color: theme.colorScheme.outlineVariant,
+                                        style: BorderStyle.solid),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Text(slot.emoji,
+                                          style: TextStyle(
+                                              fontSize: 18,
+                                              color: theme.colorScheme.outlineVariant)),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        '${slot.label} – leer',
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                            color: theme.colorScheme.outlineVariant,
+                                            fontStyle: FontStyle.italic),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                            }),
+                            if (dayIndex < 6)
+                              const Divider(height: 8, indent: 4, endIndent: 4),
+                          ],
+                        );
+                      },
+                    ),
                   ),
-                ),
+                  // Aktions-Buttons
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => Navigator.pop(ctx, null),
+                              icon: const Icon(Icons.close_rounded, size: 18),
+                              label: const Text('Verwerfen'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: FilledButton.icon(
+                              onPressed: entries.isEmpty
+                                  ? null
+                                  : () => Navigator.pop(ctx, entries),
+                              icon: const Icon(Icons.save_rounded, size: 18),
+                              label: Text(entries.isEmpty
+                                  ? 'Keine Einträge'
+                                  : 'Plan speichern (${entries.length})'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
-    return result ?? false;
   }
 
   void _saveAsTemplate() {
@@ -1470,6 +1547,7 @@ class _MealSlotCard extends ConsumerWidget {
       ),
       builder: (_) => _RecipePickerSheet(
         slotLabel: '${slot.emoji} ${slot.label}',
+        slot: slot,
         onSelect: (recipe) {
           ref.read(mealPlanProvider.notifier).setMeal(dayIndex, slot, recipe);
           HapticFeedback.lightImpact();
@@ -1536,20 +1614,48 @@ class _SmallBadge extends StatelessWidget {
 
 // ── Rezept-Auswahl Bottom Sheet ──
 
-class _RecipePickerSheet extends ConsumerWidget {
+class _RecipePickerSheet extends ConsumerStatefulWidget {
   final String slotLabel;
+  final MealSlot? slot;
   final ValueChanged<FoodRecipe> onSelect;
 
   const _RecipePickerSheet({
     required this.slotLabel,
+    this.slot,
     required this.onSelect,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_RecipePickerSheet> createState() => _RecipePickerSheetState();
+}
+
+class _RecipePickerSheetState extends ConsumerState<_RecipePickerSheet> {
+  RecipeMealType? _filter;
+
+  @override
+  void initState() {
+    super.initState();
+    // Standard-Kategorie basierend auf Slot vorauswählen
+    _filter = switch (widget.slot) {
+      MealSlot.breakfast => RecipeMealType.breakfast,
+      MealSlot.lunch     => RecipeMealType.lunch,
+      MealSlot.dinner    => RecipeMealType.dinner,
+      MealSlot.snack     => RecipeMealType.snack,
+      null               => null,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final savedAsync = ref.watch(savedRecipesProvider);
+    final categoryMap = ref.watch(recipeCategoryProvider);
     final theme = Theme.of(context);
-    final maxHeight = MediaQuery.of(context).size.height * 0.75;
+    final maxHeight = MediaQuery.of(context).size.height * 0.82;
+
+    const filterOptions = <RecipeMealType?>[
+      null, RecipeMealType.breakfast, RecipeMealType.lunch,
+      RecipeMealType.dinner, RecipeMealType.snack,
+    ];
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -1566,7 +1672,7 @@ class _RecipePickerSheet extends ConsumerWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Rezept für $slotLabel',
+                    'Rezept für ${widget.slotLabel}',
                     style: theme.textTheme.titleLarge
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
@@ -1579,14 +1685,43 @@ class _RecipePickerSheet extends ConsumerWidget {
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
+            // ── Kategorie-Filter ──
+            SizedBox(
+              height: 36,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: filterOptions.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 6),
+                itemBuilder: (_, i) {
+                  final opt = filterOptions[i];
+                  final label = opt == null ? 'Alle' : opt.label;
+                  final selected = _filter == opt;
+                  return FilterChip(
+                    label: Text(label, style: const TextStyle(fontSize: 12)),
+                    selected: selected,
+                    onSelected: (_) => setState(() => _filter = opt),
+                    visualDensity: VisualDensity.compact,
+                    showCheckmark: false,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
             Flexible(
               child: savedAsync.when(
                 loading: () =>
                     const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(child: Text('Fehler: $e')),
-                data: (recipes) {
-                  if (recipes.isEmpty) {
+                data: (allRecipes) {
+                  // Filter anwenden
+                  final recipes = _filter == null
+                      ? allRecipes
+                      : allRecipes
+                          .where((r) => categoryMap[r.savedRecipeId] == _filter)
+                          .toList();
+
+                  if (allRecipes.isEmpty) {
                     return Center(
                       child: Padding(
                         padding: const EdgeInsets.all(24),
@@ -1609,11 +1744,40 @@ class _RecipePickerSheet extends ConsumerWidget {
                       ),
                     );
                   }
+
+                  if (recipes.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.filter_list_off_rounded,
+                                size: 40, color: theme.colorScheme.onSurfaceVariant),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Keine Rezepte mit Kategorie „${_filter?.label}" gefunden.',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: () => setState(() => _filter = null),
+                              child: const Text('Alle anzeigen'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
                   return ListView.builder(
                     shrinkWrap: true,
                     itemCount: recipes.length,
                     itemBuilder: (context, index) {
                       final recipe = recipes[index];
+                      final cat = categoryMap[recipe.savedRecipeId];
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
@@ -1629,13 +1793,14 @@ class _RecipePickerSheet extends ConsumerWidget {
                               style: const TextStyle(
                                   fontWeight: FontWeight.w600)),
                           subtitle: Text(
-                            '${recipe.cookingTimeMinutes} Min. · ${recipe.ingredients.length} Zutaten'
+                            '${recipe.cookingTimeMinutes} Min.'
+                            '${cat != null ? ' · ${cat.label}' : ''}'
                             '${recipe.nutrition != null ? ' · ${recipe.nutrition!.calories} kcal' : ''}',
                             style: theme.textTheme.bodySmall,
                           ),
                           onTap: () {
                             Navigator.pop(context);
-                            onSelect(recipe);
+                            widget.onSelect(recipe);
                           },
                         ),
                       );

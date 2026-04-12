@@ -98,8 +98,9 @@ class UserProfileRepository {
         .upsert({'id': userId, ...data});
 
     // Wenn der Display-Name geändert wurde, author_name in allen
-    // veröffentlichten Rezepten und Wochenplänen dieses Users mitaktualisieren
+    // veröffentlichten Rezepten, Wochenplänen und Community-Posts dieses Users mitaktualisieren
     if (displayName != null && displayName.isNotEmpty) {
+      // Haupt-Tabellen (existieren immer)
       await Future.wait([
         _client
             .from('community_recipes')
@@ -109,7 +110,57 @@ class UserProfileRepository {
             .from('community_meal_plans')
             .update({'author_name': displayName})
             .eq('user_id', userId),
+        _client
+            .from('social_posts')
+            .update({'author_name': displayName})
+            .eq('user_id', userId),
+        _client
+            .from('social_post_comments')
+            .update({'author_name': displayName})
+            .eq('user_id', userId),
       ]);
+    }
+
+    // Wenn der Spitzname geändert wurde: community_posts & community_shares
+    // nutzen den Spitzname wenn vorhanden (hat Vorrang über Anzeigenamen)
+    final effectiveNickname = householdNickname?.trim();
+    if (effectiveNickname != null && effectiveNickname.isNotEmpty) {
+      try {
+        await Future.wait([
+          _client
+              .from('community_posts')
+              .update({'author_name': effectiveNickname})
+              .eq('user_id', userId),
+          _client
+              .from('community_shares')
+              .update({'offered_by_name': effectiveNickname})
+              .eq('offered_by', userId),
+          _client
+              .from('community_messages')
+              .update({'sender_name': effectiveNickname})
+              .eq('sender_id', userId),
+        ]);
+      } catch (_) {
+        // Tabelle existiert evtl. noch nicht – ignorieren
+      }
+    } else if (displayName != null && displayName.isNotEmpty) {
+      // Kein Spitzname gesetzt → Anzeigename für Community-Posts
+      try {
+        await Future.wait([
+          _client
+              .from('community_posts')
+              .update({'author_name': displayName})
+              .eq('user_id', userId),
+          _client
+              .from('community_shares')
+              .update({'offered_by_name': displayName})
+              .eq('offered_by', userId),
+          _client
+              .from('community_messages')
+              .update({'sender_name': displayName})
+              .eq('sender_id', userId),
+        ]);
+      } catch (_) {}
     }
   }
 
