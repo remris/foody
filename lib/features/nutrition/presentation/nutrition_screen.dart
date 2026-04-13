@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:kokomu/features/nutrition/presentation/nutrition_provider.dart';
 import 'package:kokomu/features/nutrition/presentation/nutrition_profile_sheet.dart';
 import 'package:kokomu/features/nutrition/presentation/macro_ring_chart.dart';
@@ -340,6 +341,10 @@ class _NutritionDashboard extends ConsumerWidget {
               calorieGoal: profile.calorieGoal,
             ),
           ),
+          const SizedBox(height: 16),
+
+          // Gewichtsverlauf
+          const _WeightTrackingCard(),
           const SizedBox(height: 16),
 
           // Profil-Info
@@ -746,4 +751,249 @@ class _WaterTrackerCard extends ConsumerWidget {
   }
 }
 
+// ── Gewichtsverlauf ──
 
+class _WeightTrackingCard extends ConsumerWidget {
+  const _WeightTrackingCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final entries = ref.watch(weightLogProvider);
+    final profile = ref.watch(nutritionProfileProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Gewichtsverlauf ⚖️',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            FilledButton.tonalIcon(
+              onPressed: () => _showAddWeightDialog(context, ref, profile),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Eintragen'),
+              style: FilledButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: entries.length < 2
+                ? Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.monitor_weight_outlined,
+                            size: 32, color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(height: 8),
+                        Text(
+                          entries.isEmpty
+                              ? 'Trage dein Gewicht regelmäßig ein,\num deinen Verlauf zu sehen.'
+                              : 'Noch ein Eintrag nötig für den Chart.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (entries.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Aktuell: ${entries.last.weightKg.toStringAsFixed(1)} kg',
+                            style: theme.textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ],
+                    ),
+                  )
+                : _WeightChart(entries: entries),
+          ),
+        ),
+        if (entries.length >= 2) ...[
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Aktuell: ${entries.last.weightKg.toStringAsFixed(1)} kg',
+                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Builder(builder: (_) {
+                  final diff = entries.last.weightKg - entries.first.weightKg;
+                  final color = diff < 0 ? Colors.green : diff > 0 ? Colors.red : theme.colorScheme.onSurfaceVariant;
+                  final arrow = diff < 0 ? '↓' : diff > 0 ? '↑' : '→';
+                  return Text(
+                    '$arrow ${diff.abs().toStringAsFixed(1)} kg',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _showAddWeightDialog(BuildContext context, WidgetRef ref, NutritionProfile? profile) {
+    final controller = TextEditingController(
+      text: profile?.weightKg.toStringAsFixed(1) ?? '',
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Gewicht eintragen'),
+        content: TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Gewicht (kg)',
+            suffixText: 'kg',
+            prefixIcon: Icon(Icons.monitor_weight_outlined),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final weight = double.tryParse(
+                  controller.text.trim().replaceAll(',', '.'));
+              if (weight != null && weight > 20 && weight < 500) {
+                ref.read(weightLogProvider.notifier).addEntry(weight);
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${weight.toStringAsFixed(1)} kg eingetragen ✅'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Speichern'),
+          ),
+        ],
+      ),
+    ).then((_) => controller.dispose());
+  }
+}
+
+// ── Gewichts-Linien-Chart ──
+
+class _WeightChart extends StatelessWidget {
+  final List<WeightEntry> entries;
+  const _WeightChart({required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    // Nur die letzten 30 Einträge
+    final data = entries.length > 30 ? entries.sublist(entries.length - 30) : entries;
+
+    final minWeight = data.map((e) => e.weightKg).reduce((a, b) => a < b ? a : b) - 1;
+    final maxWeight = data.map((e) => e.weightKg).reduce((a, b) => a > b ? a : b) + 1;
+
+    return SizedBox(
+      height: 160,
+      child: LineChart(
+        LineChartData(
+          minY: minWeight,
+          maxY: maxWeight,
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: (maxWeight - minWeight) / 4,
+            getDrawingHorizontalLine: (value) => FlLine(
+              color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+              strokeWidth: 1,
+            ),
+          ),
+          titlesData: FlTitlesData(
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                interval: (maxWeight - minWeight) / 4,
+                reservedSize: 40,
+                getTitlesWidget: (value, meta) => Text(
+                  '${value.toStringAsFixed(0)}',
+                  style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                interval: (data.length / 4).ceilToDouble().clamp(1, 10),
+                getTitlesWidget: (value, meta) {
+                  final idx = value.toInt();
+                  if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
+                  final d = data[idx].date;
+                  return Text(
+                    '${d.day}.${d.month}',
+                    style: TextStyle(fontSize: 9, color: theme.colorScheme.onSurfaceVariant),
+                  );
+                },
+              ),
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          lineBarsData: [
+            LineChartBarData(
+              spots: List.generate(data.length, (i) =>
+                  FlSpot(i.toDouble(), data[i].weightKg)),
+              isCurved: true,
+              curveSmoothness: 0.2,
+              color: theme.colorScheme.primary,
+              barWidth: 2.5,
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
+                  radius: 3,
+                  color: theme.colorScheme.primary,
+                  strokeColor: theme.colorScheme.surface,
+                  strokeWidth: 1.5,
+                ),
+              ),
+              belowBarData: BarAreaData(
+                show: true,
+                color: theme.colorScheme.primary.withOpacity(0.08),
+              ),
+            ),
+          ],
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipItems: (spots) => spots.map((spot) {
+                final entry = data[spot.x.toInt()];
+                return LineTooltipItem(
+                  '${entry.weightKg.toStringAsFixed(1)} kg\n${entry.date.day}.${entry.date.month}.${entry.date.year}',
+                  TextStyle(
+                    color: theme.colorScheme.onPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

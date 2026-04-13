@@ -152,6 +152,8 @@ class _CommunityRecipeFeedTabState
   bool _isUserSearch = false;
   List<Map<String, dynamic>> _userResults = [];
   bool _isSearchingUsers = false;
+  // Ernährungsfilter
+  final _activeNutritionFilters = <String>{};
 
   final String _currentUserId =
       SupabaseService.client.auth.currentUser?.id ?? '';
@@ -423,6 +425,31 @@ class _CommunityRecipeFeedTabState
             ],
           ),
         ),
+        // Ernährungsfilter
+        if (_activeNutritionFilters.isNotEmpty || true)
+          SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+              children: [
+                for (final filter in ['💪 High Protein', '🔥 Low Carb', '🍬 Kein Zucker'])
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: FilterChip(
+                      label: Text(filter, style: const TextStyle(fontSize: 11)),
+                      selected: _activeNutritionFilters.contains(filter),
+                      onSelected: (v) => setState(() {
+                        if (v) { _activeNutritionFilters.add(filter); }
+                        else { _activeNutritionFilters.remove(filter); }
+                      }),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         const Divider(height: 1),
         Expanded(
           child: feedAsync.when(
@@ -447,7 +474,22 @@ class _CommunityRecipeFeedTabState
               ),
             ),
             data: (state) {
-              if (state.recipes.isEmpty) {
+              // Ernährungsfilter anwenden
+              var recipes = state.recipes;
+              if (_activeNutritionFilters.isNotEmpty) {
+                recipes = recipes.where((r) {
+                  final n = r.nutrition;
+                  if (n == null) return false; // Ohne Nährwerte → ausschließen
+                  final servings = r.servings > 0 ? r.servings : 1;
+                  for (final f in _activeNutritionFilters) {
+                    if (f.contains('High Protein') && n.protein / servings < 20) return false;
+                    if (f.contains('Low Carb') && n.carbs / servings > 30) return false;
+                    if (f.contains('Kein Zucker') && n.sugar / servings > 5) return false;
+                  }
+                  return true;
+                }).toList();
+              }
+              if (recipes.isEmpty) {
                 return _EmptyCommunityState(
                   onPublish: () => showModalBottomSheet<bool>(
                     context: context,
@@ -465,10 +507,10 @@ class _CommunityRecipeFeedTabState
                   controller: _scrollController,
                   padding:
                       const EdgeInsets.fromLTRB(12, 8, 12, 100),
-                  itemCount: state.recipes.length +
+                  itemCount: recipes.length +
                       (state.isLoadingMore ? 1 : 0),
                   itemBuilder: (context, index) {
-                    if (index == state.recipes.length) {
+                    if (index == recipes.length) {
                       return const Center(
                           child: Padding(
                               padding: EdgeInsets.all(16),
@@ -476,7 +518,7 @@ class _CommunityRecipeFeedTabState
                                   CircularProgressIndicator()));
                     }
                     return _CommunityRecipeCard(
-                      recipe: state.recipes[index],
+                      recipe: recipes[index],
                       currentUserId: _currentUserId,
                       onTap: () => Navigator.push(
                           context,
@@ -484,10 +526,10 @@ class _CommunityRecipeFeedTabState
                               builder: (_) =>
                                   CommunityRecipeDetailScreen(
                                       recipe:
-                                          state.recipes[index]))),
+                                          recipes[index]))),
                       onLike: () => ref
                           .read(communityFeedProvider.notifier)
-                          .toggleLike(state.recipes[index].id),
+                          .toggleLike(recipes[index].id),
                     );
                   },
                 ),

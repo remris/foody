@@ -496,4 +496,96 @@ final waterTrackerProvider =
   WaterTrackerNotifier.new,
 );
 
+// ── Gewichtsverlauf (nur Pro) ──
+
+class WeightEntry {
+  final DateTime date;
+  final double weightKg;
+
+  const WeightEntry({required this.date, required this.weightKg});
+
+  Map<String, dynamic> toJson() => {
+        'date': date.toIso8601String(),
+        'weightKg': weightKg,
+      };
+
+  factory WeightEntry.fromJson(Map<String, dynamic> json) => WeightEntry(
+        date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
+        weightKg: (json['weightKg'] as num?)?.toDouble() ?? 0,
+      );
+}
+
+class WeightLogNotifier extends Notifier<List<WeightEntry>> {
+  static const _key = 'weight_log';
+
+  @override
+  List<WeightEntry> build() {
+    _load();
+    return [];
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_key);
+    if (raw == null) return;
+    try {
+      final list = jsonDecode(raw) as List;
+      final entries = list.map((e) => WeightEntry.fromJson(e)).toList();
+      entries.sort((a, b) => a.date.compareTo(b.date));
+      state = entries;
+    } catch (_) {}
+  }
+
+  Future<void> addEntry(double weightKg) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Heutigen Eintrag ersetzen falls vorhanden
+    final updated = state.where((e) {
+      final d = DateTime(e.date.year, e.date.month, e.date.day);
+      return d != today;
+    }).toList();
+    updated.add(WeightEntry(date: now, weightKg: weightKg));
+    updated.sort((a, b) => a.date.compareTo(b.date));
+
+    // Maximal 365 Einträge
+    if (updated.length > 365) updated.removeRange(0, updated.length - 365);
+
+    state = updated;
+    await _save();
+
+    // Profil-Gewicht aktualisieren
+    final profile = ref.read(nutritionProfileProvider);
+    if (profile != null) {
+      final updatedProfile = NutritionProfile.calculate(
+        age: profile.age,
+        gender: profile.gender,
+        weightKg: weightKg,
+        heightCm: profile.heightCm,
+        goal: profile.goal,
+        customCalorieGoal: profile.calorieGoal,
+      );
+      await ref.read(nutritionProfileProvider.notifier).saveProfile(updatedProfile);
+    }
+  }
+
+  Future<void> _save() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, jsonEncode(state.map((e) => e.toJson()).toList()));
+  }
+
+  Future<void> removeEntry(DateTime date) async {
+    final target = DateTime(date.year, date.month, date.day);
+    state = state.where((e) {
+      final d = DateTime(e.date.year, e.date.month, e.date.day);
+      return d != target;
+    }).toList();
+    await _save();
+  }
+}
+
+final weightLogProvider = NotifierProvider<WeightLogNotifier, List<WeightEntry>>(
+  WeightLogNotifier.new,
+);
+
 

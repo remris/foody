@@ -1,4 +1,4 @@
-﻿name: kokomu
+name: kokomu
 description: "kokomu – Smart Kitchen App – Inventar, Scanner & KI-Rezepte."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -75,6 +75,7 @@ dependencies:
   share_plus: ^12.0.1
   wakelock_plus: ^1.5.1
   confetti: ^0.8.0
+  fl_chart: ^0.70.2
   pdf: ^3.11.1
   printing: ^5.13.2
   path_provider: ^2.1.5

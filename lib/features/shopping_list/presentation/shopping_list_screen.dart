@@ -386,6 +386,33 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
     );
   }
 
+  void _showClearAllDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Alle Artikel löschen?'),
+        content: const Text('Alle Artikel aus der Liste werden unwiderruflich gelöscht.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(shoppingListProvider.notifier).clearAll();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Liste geleert ✅')),
+              );
+            },
+            child: const Text('Alle löschen'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showSaveTemplateDialog() {
     final items = ref.read(shoppingListProvider).valueOrNull ?? [];
     if (items.isEmpty) {
@@ -462,6 +489,11 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
     if (result == null || !mounted) return;
 
     if (result == _CompleteAction.transferAndClear) {
+      // Statistiken loggen
+      await ShoppingStatsService.logCompletedShop(
+        checked.map((e) => e.name).toList(),
+      );
+      ref.invalidate(shoppingStatsProvider);
       // Direkt ins Inventar übernehmen – KEIN zweites Sheet öffnen
       if (checked.isNotEmpty) {
         await _transferToInventoryDirect(checked);
@@ -473,6 +505,11 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
     }
 
     if (result == _CompleteAction.transfer) {
+      // Statistiken loggen
+      await ShoppingStatsService.logCompletedShop(
+        checked.map((e) => e.name).toList(),
+      );
+      ref.invalidate(shoppingStatsProvider);
       // Sheet öffnen (user will selbst wählen was übernommen wird)
       if (checked.isNotEmpty && mounted) {
         _showTransferSheet(context, checked);
@@ -482,6 +519,11 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
     }
 
     if (result == _CompleteAction.clearAll) {
+      // Statistiken loggen
+      await ShoppingStatsService.logCompletedShop(
+        items.map((e) => e.name).toList(),
+      );
+      ref.invalidate(shoppingStatsProvider);
       await ref.read(shoppingListProvider.notifier).clearAll();
       if (mounted) setState(() => _shoppingMode = false);
     }
@@ -642,6 +684,8 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
                     });
                   case 'clear_checked':
                     ref.read(shoppingListProvider.notifier).clearChecked();
+                  case 'clear_all':
+                    _showClearAllDialog();
                   case 'template_save':
                     _showSaveTemplateDialog();
                   case 'template_load':
@@ -692,6 +736,19 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
                       title: Text('Erledigte löschen',
                           style: TextStyle(
                               color: hasChecked ? Colors.red : Colors.grey)),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'clear_all',
+                    enabled: items.isNotEmpty,
+                    child: ListTile(
+                      leading: Icon(Icons.delete_forever_rounded,
+                          color: items.isNotEmpty ? Colors.red.shade700 : Colors.grey),
+                      title: Text('Alle Artikel löschen',
+                          style: TextStyle(
+                              color: items.isNotEmpty ? Colors.red.shade700 : Colors.grey)),
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                     ),

@@ -171,6 +171,17 @@ class CommunityRecipe {
         myRating: myRating ?? this.myRating,
       );
 
+  /// Nährwerte aus recipeJson (für Filter-Zugriff)
+  NutritionInfo? get nutrition {
+    try {
+      final n = recipeJson['nutrition'];
+      if (n == null) return null;
+      return NutritionInfo.fromJson(n as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Zugehöriges FoodRecipe-Objekt aus recipeJson rekonstruieren
   FoodRecipe toFoodRecipe() {
     try {

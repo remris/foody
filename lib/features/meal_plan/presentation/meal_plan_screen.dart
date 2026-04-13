@@ -20,6 +20,8 @@ import 'package:kokomu/core/services/pdf_export_service.dart';
 import 'package:kokomu/models/recipe.dart';
 import 'package:kokomu/features/recipes/presentation/cooking_mode_screen.dart';
 import 'package:kokomu/features/recipes/presentation/recipe_detail_screen.dart';
+import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
+import 'package:kokomu/features/shopping_list/presentation/shopping_list_provider.dart';
 import 'package:go_router/go_router.dart';
 
 class MealPlanScreen extends ConsumerStatefulWidget {
@@ -479,20 +481,63 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   }
 
   Future<void> _addToShoppingList() async {
-    final count = await ref
-        .read(mealPlanProvider.notifier)
-        .addAllIngredientsToShoppingList();
+    final entries = ref.read(mealPlanProvider).valueOrNull ?? [];
+    if (entries.isEmpty) return;
+
+    // Zutaten sammeln und deduplizieren
+    final ingredientMap = <String, String>{};
+    for (final entry in entries) {
+      for (final ing in entry.recipe.ingredients) {
+        final key = ing.name.toLowerCase().trim();
+        if (ingredientMap.containsKey(key)) {
+          ingredientMap[key] = '${ingredientMap[key]} + ${ing.amount}'.trim();
+        } else {
+          ingredientMap[key] = ing.amount;
+        }
+      }
+    }
+
+    // Inventar laden für Fehlende-Filter
+    final inventoryItems = ref.read(inventoryProvider).valueOrNull ?? [];
+    final inventoryNames = inventoryItems
+        .map((i) => i.ingredientName.toLowerCase().trim())
+        .toSet();
+
+    final allIngredients = ingredientMap.entries.toList();
+    final missingIngredients = allIngredients
+        .where((e) => !inventoryNames.contains(e.key))
+        .toList();
+
     if (!mounted) return;
+
+    final result = await showModalBottomSheet<List<MapEntry<String, String>>>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => _IngredientsShoppingSheet(
+        allIngredients: allIngredients,
+        missingIngredients: missingIngredients,
+      ),
+    );
+
+    if (result == null || result.isEmpty || !mounted) return;
+
+    final shopNotifier = ref.read(shoppingListProvider.notifier);
+    for (final entry in result) {
+      await shopNotifier.addItem(entry.key, quantity: entry.value);
+    }
     HapticFeedback.mediumImpact();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text('$count Zutaten auf die Einkaufsliste gesetzt ✅')),
+      SnackBar(content: Text('${result.length} Zutaten auf die Einkaufsliste gesetzt ✅')),
     );
   }
 
   /// Zeigt Dialog zur Auswahl von Diätpräferenzen vor KI-Generierung.
-  Future<List<String>?> _showDietPreferencesDialog() async {
+  Future<Map<String, dynamic>?> _showDietPreferencesDialog() async {
     final selected = <String>{};
+    final deficitController = TextEditingController();
     const options = [
       ('🌱', 'Vegetarisch'),
       ('🌿', 'Vegan'),
@@ -508,14 +553,15 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
       ('🍲', 'Meal Prep'),
     ];
 
-    return showDialog<List<String>>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Ernährungspräferenzen'),
           content: SizedBox(
             width: double.maxFinite,
-            child: Column(
+            child: SingleChildScrollView(
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -542,7 +588,30 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                     );
                   }).toList(),
                 ),
+                const SizedBox(height: 16),
+                // Kaloriendefizit
+                Text('Kaloriendefizit (optional)',
+                    style: Theme.of(ctx).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(
+                  'Gib ein tägliches kcal-Defizit ein, um kalorienreduzierte Rezepte zu bevorzugen.',
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: deficitController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    hintText: 'z.B. 300',
+                    suffixText: 'kcal/Tag',
+                    prefixIcon: Icon(Icons.local_fire_department_outlined),
+                    isDense: true,
+                  ),
+                ),
               ],
+            ),
             ),
           ),
           actions: [
@@ -551,7 +620,10 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
               child: const Text('Abbrechen'),
             ),
             FilledButton.icon(
-              onPressed: () => Navigator.pop(ctx, selected.toList()),
+              onPressed: () => Navigator.pop(ctx, {
+                'preferences': selected.toList(),
+                'deficit': int.tryParse(deficitController.text.trim()) ?? 0,
+              }),
               icon: const Icon(Icons.auto_awesome, size: 16),
               label: Text(selected.isEmpty ? 'Ohne Präferenz generieren' : 'Generieren'),
             ),
@@ -559,6 +631,8 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
         ),
       ),
     );
+    deficitController.dispose();
+    return result;
   }
 
   Future<void> _generateAiPlan() async {
@@ -576,8 +650,11 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
     }
 
     // Diätpräferenzen abfragen
-    final preferences = await _showDietPreferencesDialog();
-    if (preferences == null) return; // User hat abgebrochen
+    final dialogResult = await _showDietPreferencesDialog();
+    if (dialogResult == null) return; // User hat abgebrochen
+
+    final preferences = (dialogResult['preferences'] as List<String>?) ?? [];
+    final calorieDeficit = (dialogResult['deficit'] as int?) ?? 0;
 
     setState(() => _isGenerating = true);
     _pushActions();
@@ -585,6 +662,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
     try {
       final categories = ref.read(recipeCategoryProvider);
       final ratings = ref.read(recipeRatingProvider);
+      final profile = ref.read(nutritionProfileProvider);
 
       // Rezepte filtern wenn Präferenzen gewählt.
       // WICHTIG: Wenn zu wenig Rezepte passen, lieber Slots leer lassen
@@ -626,6 +704,32 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
         }).toList();
         // Pool immer nutzen – auch wenn klein. Leere Slots sind besser als falsche Rezepte.
         // Nur wenn Pool komplett leer ist → auf alle Rezepte zurückfallen und warnen
+        if (pool.isEmpty) pool = List<FoodRecipe>.from(allSaved);
+      }
+
+      // Kaloriendefizit-Filter: Rezepte nach kcal/Portion filtern
+      if (calorieDeficit > 0 && profile != null) {
+        final targetPerMeal = ((profile.calorieGoal - calorieDeficit) / 3).round();
+        final maxKcalPerMeal = targetPerMeal + 100; // ±100 kcal Toleranz
+        final filtered = pool.where((r) {
+          if (r.nutrition == null) return false; // Keine Nährwerte → ausschließen
+          final kcalPerServing = r.nutrition!.calories / r.servings;
+          return kcalPerServing <= maxKcalPerMeal;
+        }).toList();
+        if (filtered.isNotEmpty) pool = filtered;
+      }
+
+      // Ernährungs-Chips filtern (High Protein, Low Carb, Kein Zucker)
+      if (preferences.any((p) => ['High Protein', 'Low Carb', 'Zuckerarm'].contains(p))) {
+        pool = pool.where((r) {
+          if (r.nutrition == null) return false;
+          final n = r.nutrition!;
+          final perServing = r.servings > 0 ? r.servings : 1;
+          if (preferences.contains('High Protein') && n.protein / perServing < 20) return false;
+          if (preferences.contains('Low Carb') && n.carbs / perServing > 30) return false;
+          if (preferences.contains('Zuckerarm') && n.sugar / perServing > 5) return false;
+          return true;
+        }).toList();
         if (pool.isEmpty) pool = List<FoodRecipe>.from(allSaved);
       }
 
@@ -2727,5 +2831,153 @@ class _SavedCommunityTab extends ConsumerWidget {
   }
 }
 
+// ─── Zutaten-Einkaufs-Sheet mit Alle/Fehlende Toggle ──────────────────────────
 
+class _IngredientsShoppingSheet extends StatefulWidget {
+  final List<MapEntry<String, String>> allIngredients;
+  final List<MapEntry<String, String>> missingIngredients;
 
+  const _IngredientsShoppingSheet({
+    required this.allIngredients,
+    required this.missingIngredients,
+  });
+
+  @override
+  State<_IngredientsShoppingSheet> createState() => _IngredientsShoppingSheetState();
+}
+
+class _IngredientsShoppingSheetState extends State<_IngredientsShoppingSheet> {
+  bool _showMissingOnly = true;
+  late Set<String> _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    // Default: nur fehlende vorselektiert
+    _selected = widget.missingIngredients.map((e) => e.key).toSet();
+  }
+
+  List<MapEntry<String, String>> get _displayList =>
+      _showMissingOnly ? widget.missingIngredients : widget.allIngredients;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20, right: 20, top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Text('Zutaten einkaufen',
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(
+            '${widget.missingIngredients.length} von ${widget.allIngredients.length} fehlen im Vorrat',
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 12),
+          // Toggle
+          Row(
+            children: [
+              Expanded(
+                child: SegmentedButton<bool>(
+                  segments: [
+                    ButtonSegment(value: true, label: Text('Fehlende (${widget.missingIngredients.length})')),
+                    ButtonSegment(value: false, label: Text('Alle (${widget.allIngredients.length})')),
+                  ],
+                  selected: {_showMissingOnly},
+                  onSelectionChanged: (v) {
+                    setState(() {
+                      _showMissingOnly = v.first;
+                      if (_showMissingOnly) {
+                        _selected = widget.missingIngredients.map((e) => e.key).toSet();
+                      } else {
+                        _selected = widget.allIngredients.map((e) => e.key).toSet();
+                      }
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Alle/Keine auswählen
+          Row(
+            children: [
+              TextButton(
+                onPressed: () => setState(() => _selected = _displayList.map((e) => e.key).toSet()),
+                child: const Text('Alle'),
+              ),
+              TextButton(
+                onPressed: () => setState(() => _selected.clear()),
+                child: const Text('Keine'),
+              ),
+            ],
+          ),
+          // Liste
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: _displayList.length,
+              itemBuilder: (_, i) {
+                final entry = _displayList[i];
+                final isChecked = _selected.contains(entry.key);
+                final isMissing = widget.missingIngredients.any((e) => e.key == entry.key);
+                return CheckboxListTile(
+                  value: isChecked,
+                  onChanged: (v) => setState(() {
+                    if (v == true) {
+                      _selected.add(entry.key);
+                    } else {
+                      _selected.remove(entry.key);
+                    }
+                  }),
+                  title: Text(
+                    entry.key[0].toUpperCase() + entry.key.substring(1),
+                    style: TextStyle(
+                      decoration: !isMissing ? TextDecoration.none : null,
+                    ),
+                  ),
+                  subtitle: Text(entry.value),
+                  secondary: isMissing
+                      ? null
+                      : Text('vorrätig', style: TextStyle(fontSize: 11, color: Colors.green.shade600)),
+                  dense: true,
+                  controlAffinity: ListTileControlAffinity.leading,
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: _selected.isEmpty
+                ? null
+                : () {
+                    final result = widget.allIngredients
+                        .where((e) => _selected.contains(e.key))
+                        .toList();
+                    Navigator.pop(context, result);
+                  },
+            icon: const Icon(Icons.shopping_cart_outlined),
+            label: Text('${_selected.length} Zutaten einkaufen'),
+          ),
+        ],
+      ),
+    );
+  }
+}

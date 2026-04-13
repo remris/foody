@@ -13,6 +13,7 @@ import 'package:kokomu/features/settings/presentation/subscription_provider.dart
 import 'package:kokomu/features/household/presentation/household_provider.dart';
 import 'package:kokomu/features/profile/presentation/profile_provider.dart';
 import 'package:kokomu/features/profile/presentation/following_feed_screen.dart';
+import 'package:kokomu/features/recipes/presentation/cooking_mode_screen.dart';
 import 'package:kokomu/models/inventory_item.dart';
 import 'package:kokomu/widgets/main_shell.dart' show AppBarMoreButton;
 
@@ -737,6 +738,8 @@ class _TodayMealPlanCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final planAsync = ref.watch(mealPlanProvider);
+    final nutritionEntries = ref.watch(dailyNutritionProvider).valueOrNull ?? [];
+    final cookedTitles = nutritionEntries.map((e) => e.recipeTitle).toSet();
     final now = DateTime.now();
     final todayIndex = now.weekday - 1;
     final activeSlot = _currentMealSlot(now.hour);
@@ -796,22 +799,28 @@ class _TodayMealPlanCard extends ConsumerWidget {
                                 ),
                         ),
                         padding: const EdgeInsets.all(8),
-                        child: Row(
+                        child: Builder(builder: (_) {
+                          final isCooked = cookedTitles.contains(entry.recipe.title);
+                          return Row(
                           children: [
                             Container(
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: isActive
-                                    ? theme.colorScheme.secondary
-                                    : theme.colorScheme.secondaryContainer,
+                                color: isCooked
+                                    ? Colors.green.shade50
+                                    : isActive
+                                        ? theme.colorScheme.secondary
+                                        : theme.colorScheme.secondaryContainer,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Center(
-                                child: Text(
-                                  entry.slot.emoji,
-                                  style: const TextStyle(fontSize: 18),
-                                ),
+                                child: isCooked
+                                    ? Icon(Icons.check_circle_rounded, color: Colors.green.shade600, size: 22)
+                                    : Text(
+                                        entry.slot.emoji,
+                                        style: const TextStyle(fontSize: 18),
+                                      ),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -847,7 +856,8 @@ class _TodayMealPlanCard extends ConsumerWidget {
                                   : theme.colorScheme.onSurfaceVariant,
                             ),
                           ],
-                        ),
+                        );
+                        }),
                       ),
                     ),
                   );
@@ -896,6 +906,15 @@ class _CookingDoneSheetState extends ConsumerState<_CookingDoneSheet> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
+      // Ernährungsdaten tracken (auch wenn keine Reste)
+      final recipe = widget.entry.recipe;
+      if (recipe.nutrition != null) {
+        final servings = _hasLeftovers
+            ? (recipe.servings - (int.tryParse(_portionController.text.trim()) ?? 0)).toDouble().clamp(1.0, 99.0)
+            : recipe.servings.toDouble();
+        await ref.read(dailyNutritionProvider.notifier).logMeal(recipe, servings);
+      }
+
       if (_hasLeftovers) {
         final userId = ref.read(currentUserProvider)?.id ?? '';
         if (userId.isEmpty) throw Exception('Nicht eingeloggt');
@@ -989,6 +1008,20 @@ class _CookingDoneSheetState extends ConsumerState<_CookingDoneSheet> {
             ],
           ),
           const SizedBox(height: 20),
+          // Jetzt kochen – direkt in den Kochmodus
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CookingModeScreen(recipe: widget.entry.recipe),
+                ),
+              );
+            },
+            icon: const Icon(Icons.local_fire_department_rounded),
+            label: const Text('Jetzt kochen'),
+          ),
+          const SizedBox(height: 8),
           // Zum Rezept
           OutlinedButton.icon(
             onPressed: () {
