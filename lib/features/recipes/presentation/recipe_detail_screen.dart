@@ -99,11 +99,11 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
   }
 
   /// Versucht Nährwerte aus dem Inventar + Katalog-Fallback für die Zutaten des Rezepts zu berechnen.
-  /// Gibt null zurück wenn zu wenige Daten vorhanden.
+  /// Berechnet immer pro Portion basierend auf den ORIGINAL-Mengen und der ORIGINAL-Portionszahl.
+  /// Die Anzeige-Portionszahl (_servings) hat keinen Einfluss auf den Wert pro Portion.
   ({IngredientNutrients nutrients, int matched, int total})? _computeNutrientsFromInventory(
     List<RecipeIngredient> ingredients,
     List<InventoryItem> inventory,
-    int servings,
   ) {
     double totalKcal = 0;
     double totalProtein = 0;
@@ -130,14 +130,64 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
 
       if (nutrients == null || !nutrients.hasData) continue;
 
-      // Versuche Gramm-Menge aus dem Betrag zu extrahieren
-      final amountMatch = RegExp(r'^([\d.,]+)\s*(g|kg|ml|l)?', caseSensitive: false)
-          .firstMatch(ing.amount.trim());
-      double grams = 100; // default: 100g wenn nicht parsebar
+      // Gramm-Äquivalente für Einheiten ohne Gewicht
+      // Realistischer Durchschnittswert für typische Küchen-Mengen
+      const unitToGrams = <String, double>{
+        'stück': 60,    // Ei ~60g, Zwiebel ~80g – Durchschnitt
+        'stk':   60,
+        'st':    60,
+        'el':    15,    // Esslöffel ~15g
+        'tl':    5,     // Teelöffel ~5g
+        'prise': 1,     // Prise ~1g
+        'bund':  30,    // Bund Kräuter ~30g
+        'zehe':  5,     // Knoblauchzehe ~5g
+        'scheibe': 30,  // Brotscheibe ~30g
+        'blatt': 2,     // Lorbeerblatt ~2g
+        'zweig': 3,     // Rosmarinzweig ~3g
+        'dose':  400,   // Dose ~400g Inhalt
+        'glas':  350,   // Glas ~350g Inhalt
+        'packung': 250, // Packung ~250g
+        'päckchen': 8,  // z.B. Backpulver-Päckchen ~8g
+        'würfel': 42,   // Hefewürfel ~42g
+      };
+
+      // Versuche Zahl + Einheit aus dem ORIGINAL-Betrag zu extrahieren
+      final amountMatch = RegExp(
+        r'^([\d.,/]+)\s*(g|kg|ml|l|stück|stk|st|el|tl|prise|bund|zehe|scheibe|blatt|zweig|dose|glas|packung|päckchen|würfel)?',
+        caseSensitive: false,
+      ).firstMatch(ing.amount.trim());
+
+      double grams = 100; // Default: 100g wenn nicht parsebar
       if (amountMatch != null) {
-        final num = double.tryParse(amountMatch.group(1)!.replaceAll(',', '.')) ?? 100;
-        final unit = amountMatch.group(2)?.toLowerCase() ?? 'g';
-        grams = unit == 'kg' ? num * 1000 : (unit == 'l' ? num * 1000 : num);
+        // Brüche wie "1/2" auflösen
+        double? num;
+        final rawNum = amountMatch.group(1)!.replaceAll(',', '.');
+        if (rawNum.contains('/')) {
+          final parts = rawNum.split('/');
+          final a = double.tryParse(parts[0]);
+          final b = double.tryParse(parts[1]);
+          if (a != null && b != null && b != 0) num = a / b;
+        } else {
+          num = double.tryParse(rawNum);
+        }
+
+        final rawUnit = (amountMatch.group(2) ?? '').toLowerCase().trim();
+
+        if (num != null) {
+          if (rawUnit == 'kg') {
+            grams = num * 1000;
+          } else if (rawUnit == 'l') {
+            grams = num * 1000; // 1L Wasser/Milch ≈ 1000g
+          } else if (rawUnit == 'ml') {
+            grams = num; // 1ml ≈ 1g
+          } else if (rawUnit == 'g' || rawUnit.isEmpty) {
+            grams = num;
+          } else {
+            // Stück, EL, TL etc. → Gramm-Äquivalent × Anzahl
+            final unitGrams = unitToGrams[rawUnit] ?? 100;
+            grams = num * unitGrams;
+          }
+        }
       }
 
       final factor = grams / 100.0;
@@ -152,14 +202,15 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
     // Nur anzeigen wenn mindestens 30% der Zutaten Nährwerte haben
     if (matchCount < (ingredients.length * 0.3).ceil() || matchCount == 0) return null;
 
-    final portions = servings > 0 ? servings : 1;
+    // Durch ORIGINAL-Portionszahl teilen → Wert pro Portion bleibt konstant
+    final originalPortions = widget.recipe.servings > 0 ? widget.recipe.servings : 1;
     return (
       nutrients: IngredientNutrients(
-        kcalPer100g: totalKcal / portions,
-        proteinPer100g: totalProtein / portions,
-        fatPer100g: totalFat / portions,
-        carbsPer100g: totalCarbs / portions,
-        fiberPer100g: totalFiber / portions,
+        kcalPer100g: totalKcal / originalPortions,
+        proteinPer100g: totalProtein / originalPortions,
+        fatPer100g: totalFat / originalPortions,
+        carbsPer100g: totalCarbs / originalPortions,
+        fiberPer100g: totalFiber / originalPortions,
       ),
       matched: matchCount,
       total: ingredients.length,
@@ -201,10 +252,10 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
           children: [
             _NutrientValue(value: kcal.toInt().toString(), unit: 'kcal', label: 'Kalorien', color: Colors.orange),
             _NutrientValue(value: protein.toInt().toString(), unit: 'g', label: 'Protein', color: Colors.purple),
-            _NutrientValue(value: carbs.toInt().toString(), unit: 'g', label: 'Carbs', color: Colors.blue),
+            _NutrientValue(value: carbs.toInt().toString(), unit: 'g', label: 'Kohlenhydr.', color: Colors.blue),
             _NutrientValue(value: fat.toInt().toString(), unit: 'g', label: 'Fett', color: Colors.amber),
             if (fiber > 0)
-              _NutrientValue(value: fiber.toInt().toString(), unit: 'g', label: 'Ballast.', color: Colors.brown),
+              _NutrientValue(value: fiber.toInt().toString(), unit: 'g', label: 'Ballaststoffe', color: Colors.brown),
           ],
         ),
         if (isEstimated) ...[
@@ -597,7 +648,6 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                         final result = _computeNutrientsFromInventory(
                           recipe.ingredients,
                           inventory,
-                          _servings,
                         );
                         if (result != null) {
                           return _buildNutritionRow(

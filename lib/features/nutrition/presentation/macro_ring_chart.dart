@@ -1,8 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-/// Donut-Chart für Makro-Nährwerte (Protein, Carbs, Fat).
-/// Drei konzentrische Bögen mit Kalorien-Anzeige in der Mitte.
+/// Donut-Chart für Makro-Nährwerte (Protein, Carbs, Fat, Ballaststoffe, Zucker).
+/// Fünf konzentrische Bögen mit Kalorien-Anzeige in der Mitte.
 class MacroRingChart extends StatelessWidget {
   final double proteinCurrent;
   final double proteinTarget;
@@ -10,6 +10,10 @@ class MacroRingChart extends StatelessWidget {
   final double carbsTarget;
   final double fatCurrent;
   final double fatTarget;
+  final double fiberCurrent;
+  final double fiberTarget;
+  final double sugarCurrent;
+  final double sugarTarget;
   final int caloriesCurrent;
   final int caloriesTarget;
   final double size;
@@ -22,6 +26,10 @@ class MacroRingChart extends StatelessWidget {
     required this.carbsTarget,
     required this.fatCurrent,
     required this.fatTarget,
+    this.fiberCurrent = 0,
+    this.fiberTarget = 30,
+    this.sugarCurrent = 0,
+    this.sugarTarget = 50,
     required this.caloriesCurrent,
     required this.caloriesTarget,
     this.size = 200,
@@ -49,9 +57,17 @@ class MacroRingChart extends StatelessWidget {
               fatFraction: fatTarget > 0
                   ? (fatCurrent / fatTarget).clamp(0.0, 1.0)
                   : 0.0,
+              fiberFraction: fiberTarget > 0
+                  ? (fiberCurrent / fiberTarget).clamp(0.0, 1.0)
+                  : 0.0,
+              sugarFraction: sugarTarget > 0
+                  ? (sugarCurrent / sugarTarget).clamp(0.0, 1.0)
+                  : 0.0,
               proteinColor: Colors.blue.shade400,
               carbsColor: Colors.orange.shade400,
               fatColor: Colors.amber.shade600,
+              fiberColor: Colors.green.shade400,
+              sugarColor: Colors.pink.shade300,
               trackColor: isDark
                   ? Colors.white.withValues(alpha: 0.08)
                   : Colors.black.withValues(alpha: 0.06),
@@ -81,7 +97,7 @@ class MacroRingChart extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        // Legende
+        // Legende Zeile 1: Protein, Carbs, Fett
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -94,7 +110,7 @@ class MacroRingChart extends StatelessWidget {
             ),
             _LegendItem(
               color: Colors.orange.shade400,
-              label: 'Carbs',
+              label: 'Kohlenhydr.',
               current: carbsCurrent,
               target: carbsTarget,
               unit: 'g',
@@ -105,6 +121,28 @@ class MacroRingChart extends StatelessWidget {
               current: fatCurrent,
               target: fatTarget,
               unit: 'g',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Legende Zeile 2: Ballaststoffe, Zucker
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _LegendItem(
+              color: Colors.green.shade400,
+              label: 'Ballaststoffe',
+              current: fiberCurrent,
+              target: fiberTarget,
+              unit: 'g',
+            ),
+            _LegendItem(
+              color: Colors.pink.shade300,
+              label: 'Zucker',
+              current: sugarCurrent,
+              target: sugarTarget,
+              unit: 'g',
+              isLimit: true,
             ),
           ],
         ),
@@ -119,6 +157,7 @@ class _LegendItem extends StatelessWidget {
   final double current;
   final double target;
   final String unit;
+  final bool isLimit;
 
   const _LegendItem({
     required this.color,
@@ -126,11 +165,13 @@ class _LegendItem extends StatelessWidget {
     required this.current,
     required this.target,
     required this.unit,
+    this.isLimit = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isOver = isLimit && current > target && target > 0;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -141,7 +182,7 @@ class _LegendItem extends StatelessWidget {
               width: 10,
               height: 10,
               decoration: BoxDecoration(
-                color: color,
+                color: isOver ? theme.colorScheme.error : color,
                 shape: BoxShape.circle,
               ),
             ),
@@ -156,10 +197,13 @@ class _LegendItem extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          '${current.toStringAsFixed(0)} / ${target.toStringAsFixed(0)}$unit',
+          isLimit
+              ? '${current.toStringAsFixed(0)} / max ${target.toStringAsFixed(0)}$unit'
+              : '${current.toStringAsFixed(0)} / ${target.toStringAsFixed(0)}$unit',
           style: theme.textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w600,
             fontSize: 11,
+            color: isOver ? theme.colorScheme.error : null,
           ),
         ),
       ],
@@ -171,43 +215,51 @@ class _MacroRingPainter extends CustomPainter {
   final double proteinFraction;
   final double carbsFraction;
   final double fatFraction;
+  final double fiberFraction;
+  final double sugarFraction;
   final Color proteinColor;
   final Color carbsColor;
   final Color fatColor;
+  final Color fiberColor;
+  final Color sugarColor;
   final Color trackColor;
 
   _MacroRingPainter({
     required this.proteinFraction,
     required this.carbsFraction,
     required this.fatFraction,
+    required this.fiberFraction,
+    required this.sugarFraction,
     required this.proteinColor,
     required this.carbsColor,
     required this.fatColor,
+    required this.fiberColor,
+    required this.sugarColor,
     required this.trackColor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final strokeWidth = size.width * 0.085;
+    final strokeWidth = size.width * 0.07;
     const startAngle = -pi / 2;
 
-    // Drei Ringe von außen nach innen
+    // Fünf Ringe von außen nach innen:
+    // 1=Fett, 2=Carbs, 3=Protein, 4=Ballaststoffe, 5=Zucker
     final rings = [
-      (size.width / 2 - strokeWidth * 0.6, fatFraction, fatColor),
-      (size.width / 2 - strokeWidth * 2.0, carbsFraction, carbsColor),
-      (size.width / 2 - strokeWidth * 3.4, proteinFraction, proteinColor),
+      (size.width / 2 - strokeWidth * 0.6, fatFraction,     fatColor),
+      (size.width / 2 - strokeWidth * 1.8, carbsFraction,   carbsColor),
+      (size.width / 2 - strokeWidth * 3.0, proteinFraction, proteinColor),
+      (size.width / 2 - strokeWidth * 4.2, fiberFraction,   fiberColor),
+      (size.width / 2 - strokeWidth * 5.4, sugarFraction,   sugarColor),
     ];
 
     for (final (radius, fraction, color) in rings) {
+      if (radius <= 0) continue;
       final rect = Rect.fromCircle(center: center, radius: radius);
 
-      // Track (Hintergrund)
       canvas.drawArc(
-        rect,
-        0,
-        2 * pi,
-        false,
+        rect, 0, 2 * pi, false,
         Paint()
           ..color = trackColor
           ..style = PaintingStyle.stroke
@@ -215,13 +267,9 @@ class _MacroRingPainter extends CustomPainter {
           ..strokeCap = StrokeCap.round,
       );
 
-      // Fortschritt
       if (fraction > 0) {
         canvas.drawArc(
-          rect,
-          startAngle,
-          2 * pi * fraction,
-          false,
+          rect, startAngle, 2 * pi * fraction, false,
           Paint()
             ..color = color
             ..style = PaintingStyle.stroke
@@ -236,7 +284,9 @@ class _MacroRingPainter extends CustomPainter {
   bool shouldRepaint(_MacroRingPainter oldDelegate) =>
       proteinFraction != oldDelegate.proteinFraction ||
       carbsFraction != oldDelegate.carbsFraction ||
-      fatFraction != oldDelegate.fatFraction;
+      fatFraction != oldDelegate.fatFraction ||
+      fiberFraction != oldDelegate.fiberFraction ||
+      sugarFraction != oldDelegate.sugarFraction;
 }
 
 /// Kompakter Kalorien-Fortschrittsbalken für den Inventar-Tab.
@@ -331,4 +381,3 @@ class CompactCalorieBar extends StatelessWidget {
     );
   }
 }
-

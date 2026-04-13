@@ -1,0 +1,7 @@
+Analyzing nutrient_data.dart...
+
+  error - nutrient_data.dart:229:3 - Two keys in a constant map literal can't be equal. Change or remove the duplicate key. - equal_keys_in_const_map
+           - The first key with this value at nutrient_data.dart:213:3.
+   info - nutrient_data.dart:4:9 - Library names are not necessary. Remove the library name. - unnecessary_library_name
+
+2 issues found.

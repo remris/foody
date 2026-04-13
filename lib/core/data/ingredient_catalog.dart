@@ -9,11 +9,6 @@ class IngredientEntry {
   final String? defaultUnit;
   final List<String> aliases; // Alternative Schreibweisen für Suche
   final String canonicalId;
-  /// Optionale Nährwerte pro 100g (für häufige Basisprodukte hinterlegt)
-  final double? kcalPer100g;
-  final double? proteinPer100g;
-  final double? fatPer100g;
-  final double? carbsPer100g;
 
   const IngredientEntry({
     required this.name,
@@ -21,18 +16,7 @@ class IngredientEntry {
     required this.canonicalId,
     this.defaultUnit,
     this.aliases = const [],
-    this.kcalPer100g,
-    this.proteinPer100g,
-    this.fatPer100g,
-    this.carbsPer100g,
   });
-
-  /// Ob für diesen Eintrag Nährwerte hinterlegt sind.
-  bool get hasNutrition =>
-      kcalPer100g != null ||
-      proteinPer100g != null ||
-      fatPer100g != null ||
-      carbsPer100g != null;
 }
 
 class IngredientCatalog {
@@ -40,72 +24,72 @@ class IngredientCatalog {
     // ──────────────────────────────────────────────────────
     // MILCHPRODUKTE & EIER
     // ──────────────────────────────────────────────────────
-    IngredientEntry(name: 'Vollmilch', category: 'Milchprodukte', canonicalId: 'milch_voll', defaultUnit: 'L', aliases: ['Milch', 'Kuhmilch'], kcalPer100g: 64, proteinPer100g: 3.3, fatPer100g: 3.5, carbsPer100g: 4.8),
-    IngredientEntry(name: 'Halbfettmilch', category: 'Milchprodukte', canonicalId: 'milch_halb', defaultUnit: 'L', kcalPer100g: 47, proteinPer100g: 3.4, fatPer100g: 1.5, carbsPer100g: 4.9),
-    IngredientEntry(name: 'Laktosefreie Milch', category: 'Milchprodukte', canonicalId: 'milch_laktosefrei', defaultUnit: 'L', kcalPer100g: 47, proteinPer100g: 3.4, fatPer100g: 1.5, carbsPer100g: 4.9),
-    IngredientEntry(name: 'Hafermilch', category: 'Milchprodukte', canonicalId: 'hafermilch', defaultUnit: 'L', aliases: ['Haferdrink'], kcalPer100g: 42, proteinPer100g: 0.5, fatPer100g: 1.5, carbsPer100g: 6.5),
-    IngredientEntry(name: 'Sojamilch', category: 'Milchprodukte', canonicalId: 'sojamilch', defaultUnit: 'L', aliases: ['Sojadrink'], kcalPer100g: 39, proteinPer100g: 3.3, fatPer100g: 1.8, carbsPer100g: 1.2),
-    IngredientEntry(name: 'Mandelmilch', category: 'Milchprodukte', canonicalId: 'mandelmilch', defaultUnit: 'L', kcalPer100g: 24, proteinPer100g: 0.5, fatPer100g: 1.1, carbsPer100g: 3.0),
-    IngredientEntry(name: 'Butter', category: 'Milchprodukte', canonicalId: 'butter', defaultUnit: 'g', kcalPer100g: 741, proteinPer100g: 0.7, fatPer100g: 83, carbsPer100g: 0.6),
-    IngredientEntry(name: 'Margarine', category: 'Milchprodukte', canonicalId: 'margarine', defaultUnit: 'g', kcalPer100g: 709, proteinPer100g: 0.2, fatPer100g: 80, carbsPer100g: 0.4),
-    IngredientEntry(name: 'Sahne', category: 'Milchprodukte', canonicalId: 'sahne', defaultUnit: 'ml', aliases: ['Schlagsahne', 'Schlagobers'], kcalPer100g: 309, proteinPer100g: 2.4, fatPer100g: 31.7, carbsPer100g: 3.2),
-    IngredientEntry(name: 'Sauerrahm', category: 'Milchprodukte', canonicalId: 'sauerrahm', defaultUnit: 'g', aliases: ['Saure Sahne'], kcalPer100g: 115, proteinPer100g: 2.9, fatPer100g: 10, carbsPer100g: 3.6),
-    IngredientEntry(name: 'Schmand', category: 'Milchprodukte', canonicalId: 'schmand', defaultUnit: 'g', kcalPer100g: 240, proteinPer100g: 2.6, fatPer100g: 24, carbsPer100g: 3.2),
-    IngredientEntry(name: 'Crème fraîche', category: 'Milchprodukte', canonicalId: 'creme_fraiche', defaultUnit: 'g', aliases: ['Creme Fraiche'], kcalPer100g: 292, proteinPer100g: 2.4, fatPer100g: 30, carbsPer100g: 2.5),
-    IngredientEntry(name: 'Joghurt (Natur)', category: 'Milchprodukte', canonicalId: 'joghurt_natur', defaultUnit: 'g', aliases: ['Naturjoghurt'], kcalPer100g: 56, proteinPer100g: 3.5, fatPer100g: 1.5, carbsPer100g: 6.0),
-    IngredientEntry(name: 'Joghurt (3,5%)', category: 'Milchprodukte', canonicalId: 'joghurt_voll', defaultUnit: 'g', kcalPer100g: 73, proteinPer100g: 3.9, fatPer100g: 3.5, carbsPer100g: 6.3),
-    IngredientEntry(name: 'Griechischer Joghurt', category: 'Milchprodukte', canonicalId: 'joghurt_griech', defaultUnit: 'g', kcalPer100g: 133, proteinPer100g: 5.0, fatPer100g: 10, carbsPer100g: 5.0),
-    IngredientEntry(name: 'Quark (Mager)', category: 'Milchprodukte', canonicalId: 'quark_mager', defaultUnit: 'g', kcalPer100g: 67, proteinPer100g: 12, fatPer100g: 0.3, carbsPer100g: 4.0),
-    IngredientEntry(name: 'Quark (Vollfett)', category: 'Milchprodukte', canonicalId: 'quark_voll', defaultUnit: 'g', kcalPer100g: 159, proteinPer100g: 11, fatPer100g: 11.4, carbsPer100g: 3.2),
-    IngredientEntry(name: 'Frischkäse', category: 'Milchprodukte', canonicalId: 'frischkaese', defaultUnit: 'g', kcalPer100g: 264, proteinPer100g: 5.5, fatPer100g: 25, carbsPer100g: 3.0),
-    IngredientEntry(name: 'Gouda', category: 'Milchprodukte', canonicalId: 'gouda', defaultUnit: 'g', kcalPer100g: 356, proteinPer100g: 25, fatPer100g: 27, carbsPer100g: 0),
-    IngredientEntry(name: 'Edamer', category: 'Milchprodukte', canonicalId: 'edamer', defaultUnit: 'g', kcalPer100g: 313, proteinPer100g: 25, fatPer100g: 24, carbsPer100g: 0),
-    IngredientEntry(name: 'Emmentaler', category: 'Milchprodukte', canonicalId: 'emmentaler', defaultUnit: 'g', kcalPer100g: 382, proteinPer100g: 29, fatPer100g: 29, carbsPer100g: 0),
-    IngredientEntry(name: 'Parmesan', category: 'Milchprodukte', canonicalId: 'parmesan', defaultUnit: 'g', kcalPer100g: 431, proteinPer100g: 38, fatPer100g: 29, carbsPer100g: 0),
-    IngredientEntry(name: 'Mozzarella', category: 'Milchprodukte', canonicalId: 'mozzarella', defaultUnit: 'g', kcalPer100g: 280, proteinPer100g: 20, fatPer100g: 21, carbsPer100g: 1.0),
-    IngredientEntry(name: 'Mozzarella (gerieben)', category: 'Milchprodukte', canonicalId: 'mozzarella_gerieben', defaultUnit: 'g', kcalPer100g: 280, proteinPer100g: 20, fatPer100g: 21, carbsPer100g: 1.0),
-    IngredientEntry(name: 'Feta', category: 'Milchprodukte', canonicalId: 'feta', defaultUnit: 'g', aliases: ['Schafskäse'], kcalPer100g: 264, proteinPer100g: 17, fatPer100g: 21, carbsPer100g: 1.0),
-    IngredientEntry(name: 'Ricotta', category: 'Milchprodukte', canonicalId: 'ricotta', defaultUnit: 'g', kcalPer100g: 174, proteinPer100g: 11, fatPer100g: 13, carbsPer100g: 3.0),
-    IngredientEntry(name: 'Mascarpone', category: 'Milchprodukte', canonicalId: 'mascarpone', defaultUnit: 'g', kcalPer100g: 429, proteinPer100g: 4.6, fatPer100g: 44, carbsPer100g: 3.5),
-    IngredientEntry(name: 'Eier', category: 'Milchprodukte', canonicalId: 'eier', defaultUnit: 'Stück', aliases: ['Ei', 'Hühnereier'], kcalPer100g: 155, proteinPer100g: 13, fatPer100g: 11, carbsPer100g: 1.1),
-    IngredientEntry(name: 'Eier (M)', category: 'Milchprodukte', canonicalId: 'eier_m', defaultUnit: 'Stück', kcalPer100g: 155, proteinPer100g: 13, fatPer100g: 11, carbsPer100g: 1.1),
-    IngredientEntry(name: 'Eier (L)', category: 'Milchprodukte', canonicalId: 'eier_l', defaultUnit: 'Stück', kcalPer100g: 155, proteinPer100g: 13, fatPer100g: 11, carbsPer100g: 1.1),
-    IngredientEntry(name: 'Kondensmilch', category: 'Milchprodukte', canonicalId: 'kondensmilch', defaultUnit: 'g', kcalPer100g: 131, proteinPer100g: 6.8, fatPer100g: 7.5, carbsPer100g: 9.8),
+    IngredientEntry(name: 'Vollmilch', category: 'Milchprodukte', canonicalId: 'milch_voll', defaultUnit: 'L', aliases: ['Milch', 'Kuhmilch']),
+    IngredientEntry(name: 'Halbfettmilch', category: 'Milchprodukte', canonicalId: 'milch_halb', defaultUnit: 'L'),
+    IngredientEntry(name: 'Laktosefreie Milch', category: 'Milchprodukte', canonicalId: 'milch_laktosefrei', defaultUnit: 'L'),
+    IngredientEntry(name: 'Hafermilch', category: 'Milchprodukte', canonicalId: 'hafermilch', defaultUnit: 'L', aliases: ['Haferdrink']),
+    IngredientEntry(name: 'Sojamilch', category: 'Milchprodukte', canonicalId: 'sojamilch', defaultUnit: 'L', aliases: ['Sojadrink']),
+    IngredientEntry(name: 'Mandelmilch', category: 'Milchprodukte', canonicalId: 'mandelmilch', defaultUnit: 'L'),
+    IngredientEntry(name: 'Butter', category: 'Milchprodukte', canonicalId: 'butter', defaultUnit: 'g'),
+    IngredientEntry(name: 'Margarine', category: 'Milchprodukte', canonicalId: 'margarine', defaultUnit: 'g'),
+    IngredientEntry(name: 'Sahne', category: 'Milchprodukte', canonicalId: 'sahne', defaultUnit: 'ml', aliases: ['Schlagsahne', 'Schlagobers']),
+    IngredientEntry(name: 'Sauerrahm', category: 'Milchprodukte', canonicalId: 'sauerrahm', defaultUnit: 'g', aliases: ['Saure Sahne']),
+    IngredientEntry(name: 'Schmand', category: 'Milchprodukte', canonicalId: 'schmand', defaultUnit: 'g'),
+    IngredientEntry(name: 'Crème fraîche', category: 'Milchprodukte', canonicalId: 'creme_fraiche', defaultUnit: 'g', aliases: ['Creme Fraiche']),
+    IngredientEntry(name: 'Joghurt (Natur)', category: 'Milchprodukte', canonicalId: 'joghurt_natur', defaultUnit: 'g', aliases: ['Naturjoghurt']),
+    IngredientEntry(name: 'Joghurt (3,5%)', category: 'Milchprodukte', canonicalId: 'joghurt_voll', defaultUnit: 'g'),
+    IngredientEntry(name: 'Griechischer Joghurt', category: 'Milchprodukte', canonicalId: 'joghurt_griech', defaultUnit: 'g'),
+    IngredientEntry(name: 'Quark (Mager)', category: 'Milchprodukte', canonicalId: 'quark_mager', defaultUnit: 'g'),
+    IngredientEntry(name: 'Quark (Vollfett)', category: 'Milchprodukte', canonicalId: 'quark_voll', defaultUnit: 'g'),
+    IngredientEntry(name: 'Frischkäse', category: 'Milchprodukte', canonicalId: 'frischkaese', defaultUnit: 'g'),
+    IngredientEntry(name: 'Gouda', category: 'Milchprodukte', canonicalId: 'gouda', defaultUnit: 'g'),
+    IngredientEntry(name: 'Edamer', category: 'Milchprodukte', canonicalId: 'edamer', defaultUnit: 'g'),
+    IngredientEntry(name: 'Emmentaler', category: 'Milchprodukte', canonicalId: 'emmentaler', defaultUnit: 'g'),
+    IngredientEntry(name: 'Parmesan', category: 'Milchprodukte', canonicalId: 'parmesan', defaultUnit: 'g'),
+    IngredientEntry(name: 'Mozzarella', category: 'Milchprodukte', canonicalId: 'mozzarella', defaultUnit: 'g'),
+    IngredientEntry(name: 'Mozzarella (gerieben)', category: 'Milchprodukte', canonicalId: 'mozzarella_gerieben', defaultUnit: 'g'),
+    IngredientEntry(name: 'Feta', category: 'Milchprodukte', canonicalId: 'feta', defaultUnit: 'g', aliases: ['Schafskäse']),
+    IngredientEntry(name: 'Ricotta', category: 'Milchprodukte', canonicalId: 'ricotta', defaultUnit: 'g'),
+    IngredientEntry(name: 'Mascarpone', category: 'Milchprodukte', canonicalId: 'mascarpone', defaultUnit: 'g'),
+    IngredientEntry(name: 'Eier', category: 'Milchprodukte', canonicalId: 'eier', defaultUnit: 'Stück', aliases: ['Ei', 'Hühnereier']),
+    IngredientEntry(name: 'Eier (M)', category: 'Milchprodukte', canonicalId: 'eier_m', defaultUnit: 'Stück'),
+    IngredientEntry(name: 'Eier (L)', category: 'Milchprodukte', canonicalId: 'eier_l', defaultUnit: 'Stück'),
+    IngredientEntry(name: 'Kondensmilch', category: 'Milchprodukte', canonicalId: 'kondensmilch', defaultUnit: 'g'),
 
     // ──────────────────────────────────────────────────────
     // FLEISCH & GEFLÜGEL (FRISCH)
     // ──────────────────────────────────────────────────────
-    IngredientEntry(name: 'Hähnchenbrust', category: 'Fleisch & Fisch', canonicalId: 'haehnchen_brust', defaultUnit: 'g', aliases: ['Hühnerbrust', 'Chicken Breast'], kcalPer100g: 110, proteinPer100g: 23, fatPer100g: 1.2, carbsPer100g: 0),
-    IngredientEntry(name: 'Hähnchenschenkel', category: 'Fleisch & Fisch', canonicalId: 'haehnchen_schenkel', defaultUnit: 'Stück', kcalPer100g: 174, proteinPer100g: 18, fatPer100g: 11, carbsPer100g: 0),
-    IngredientEntry(name: 'Hähnchen (TK)', category: 'Fleisch & Fisch', canonicalId: 'haehnchen_tk', defaultUnit: 'g', kcalPer100g: 119, proteinPer100g: 21, fatPer100g: 3.6, carbsPer100g: 0),
-    IngredientEntry(name: 'Hähnchen (ganz)', category: 'Fleisch & Fisch', canonicalId: 'haehnchen_ganz', defaultUnit: 'Stück', kcalPer100g: 167, proteinPer100g: 20, fatPer100g: 9.3, carbsPer100g: 0),
-    IngredientEntry(name: 'Putenbrust', category: 'Fleisch & Fisch', canonicalId: 'puten_brust', defaultUnit: 'g', kcalPer100g: 107, proteinPer100g: 24, fatPer100g: 1.0, carbsPer100g: 0),
-    IngredientEntry(name: 'Putengeschnetzeltes', category: 'Fleisch & Fisch', canonicalId: 'puten_geschnetzelt', defaultUnit: 'g', kcalPer100g: 107, proteinPer100g: 24, fatPer100g: 1.0, carbsPer100g: 0),
-    IngredientEntry(name: 'Hackfleisch (gemischt)', category: 'Fleisch & Fisch', canonicalId: 'hack_gemischt', defaultUnit: 'g', kcalPer100g: 224, proteinPer100g: 18, fatPer100g: 17, carbsPer100g: 0),
-    IngredientEntry(name: 'Hackfleisch (Rind)', category: 'Fleisch & Fisch', canonicalId: 'hack_rind', defaultUnit: 'g', kcalPer100g: 212, proteinPer100g: 20, fatPer100g: 14, carbsPer100g: 0),
-    IngredientEntry(name: 'Hackfleisch (TK)', category: 'Fleisch & Fisch', canonicalId: 'hack_tk', defaultUnit: 'g', kcalPer100g: 224, proteinPer100g: 18, fatPer100g: 17, carbsPer100g: 0),
-    IngredientEntry(name: 'Rindersteak', category: 'Fleisch & Fisch', canonicalId: 'rind_steak', defaultUnit: 'g', kcalPer100g: 183, proteinPer100g: 21, fatPer100g: 11, carbsPer100g: 0),
-    IngredientEntry(name: 'Rindergulasch', category: 'Fleisch & Fisch', canonicalId: 'rind_gulasch', defaultUnit: 'g', kcalPer100g: 155, proteinPer100g: 21, fatPer100g: 8, carbsPer100g: 0),
-    IngredientEntry(name: 'Schweinefilet', category: 'Fleisch & Fisch', canonicalId: 'schwein_filet', defaultUnit: 'g', kcalPer100g: 117, proteinPer100g: 22, fatPer100g: 2.9, carbsPer100g: 0),
-    IngredientEntry(name: 'Schweinebauch', category: 'Fleisch & Fisch', canonicalId: 'schwein_bauch', defaultUnit: 'g', kcalPer100g: 518, proteinPer100g: 9.3, fatPer100g: 53, carbsPer100g: 0),
-    IngredientEntry(name: 'Schweineschnitzel', category: 'Fleisch & Fisch', canonicalId: 'schwein_schnitzel', defaultUnit: 'g', kcalPer100g: 131, proteinPer100g: 22, fatPer100g: 4.5, carbsPer100g: 0),
-    IngredientEntry(name: 'Kassler', category: 'Fleisch & Fisch', canonicalId: 'kassler', defaultUnit: 'g', kcalPer100g: 130, proteinPer100g: 22, fatPer100g: 4.5, carbsPer100g: 0),
-    IngredientEntry(name: 'Speck', category: 'Fleisch & Fisch', canonicalId: 'speck', defaultUnit: 'g', aliases: ['Bacon', 'Bauchspeck'], kcalPer100g: 458, proteinPer100g: 14, fatPer100g: 45, carbsPer100g: 0),
-    IngredientEntry(name: 'Schinken (gekocht)', category: 'Fleisch & Fisch', canonicalId: 'schinken_gekocht', defaultUnit: 'g', kcalPer100g: 115, proteinPer100g: 20, fatPer100g: 4, carbsPer100g: 0),
-    IngredientEntry(name: 'Schinken (roh)', category: 'Fleisch & Fisch', canonicalId: 'schinken_roh', defaultUnit: 'g', kcalPer100g: 192, proteinPer100g: 26, fatPer100g: 10, carbsPer100g: 0),
-    IngredientEntry(name: 'Bratwurst', category: 'Fleisch & Fisch', canonicalId: 'bratwurst', defaultUnit: 'Stück', kcalPer100g: 301, proteinPer100g: 13, fatPer100g: 26, carbsPer100g: 2.0),
-    IngredientEntry(name: 'Wiener Würstchen', category: 'Fleisch & Fisch', canonicalId: 'wiener', defaultUnit: 'Stück', kcalPer100g: 250, proteinPer100g: 12, fatPer100g: 22, carbsPer100g: 1.0),
-    IngredientEntry(name: 'Salami', category: 'Fleisch & Fisch', canonicalId: 'salami', defaultUnit: 'g', kcalPer100g: 397, proteinPer100g: 22, fatPer100g: 34, carbsPer100g: 1.5),
+    IngredientEntry(name: 'Hähnchenbrust', category: 'Fleisch & Fisch', canonicalId: 'haehnchen_brust', defaultUnit: 'g', aliases: ['Hühnerbrust', 'Chicken Breast']),
+    IngredientEntry(name: 'Hähnchenschenkel', category: 'Fleisch & Fisch', canonicalId: 'haehnchen_schenkel', defaultUnit: 'Stück'),
+    IngredientEntry(name: 'Hähnchen (TK)', category: 'Fleisch & Fisch', canonicalId: 'haehnchen_tk', defaultUnit: 'g'),
+    IngredientEntry(name: 'Hähnchen (ganz)', category: 'Fleisch & Fisch', canonicalId: 'haehnchen_ganz', defaultUnit: 'Stück'),
+    IngredientEntry(name: 'Putenbrust', category: 'Fleisch & Fisch', canonicalId: 'puten_brust', defaultUnit: 'g'),
+    IngredientEntry(name: 'Putengeschnetzeltes', category: 'Fleisch & Fisch', canonicalId: 'puten_geschnetzelt', defaultUnit: 'g'),
+    IngredientEntry(name: 'Hackfleisch (gemischt)', category: 'Fleisch & Fisch', canonicalId: 'hack_gemischt', defaultUnit: 'g'),
+    IngredientEntry(name: 'Hackfleisch (Rind)', category: 'Fleisch & Fisch', canonicalId: 'hack_rind', defaultUnit: 'g'),
+    IngredientEntry(name: 'Hackfleisch (TK)', category: 'Fleisch & Fisch', canonicalId: 'hack_tk', defaultUnit: 'g'),
+    IngredientEntry(name: 'Rindersteak', category: 'Fleisch & Fisch', canonicalId: 'rind_steak', defaultUnit: 'g'),
+    IngredientEntry(name: 'Rindergulasch', category: 'Fleisch & Fisch', canonicalId: 'rind_gulasch', defaultUnit: 'g'),
+    IngredientEntry(name: 'Schweinefilet', category: 'Fleisch & Fisch', canonicalId: 'schwein_filet', defaultUnit: 'g'),
+    IngredientEntry(name: 'Schweinebauch', category: 'Fleisch & Fisch', canonicalId: 'schwein_bauch', defaultUnit: 'g'),
+    IngredientEntry(name: 'Schweineschnitzel', category: 'Fleisch & Fisch', canonicalId: 'schwein_schnitzel', defaultUnit: 'g'),
+    IngredientEntry(name: 'Kassler', category: 'Fleisch & Fisch', canonicalId: 'kassler', defaultUnit: 'g'),
+    IngredientEntry(name: 'Speck', category: 'Fleisch & Fisch', canonicalId: 'speck', defaultUnit: 'g', aliases: ['Bacon', 'Bauchspeck']),
+    IngredientEntry(name: 'Schinken (gekocht)', category: 'Fleisch & Fisch', canonicalId: 'schinken_gekocht', defaultUnit: 'g'),
+    IngredientEntry(name: 'Schinken (roh)', category: 'Fleisch & Fisch', canonicalId: 'schinken_roh', defaultUnit: 'g'),
+    IngredientEntry(name: 'Bratwurst', category: 'Fleisch & Fisch', canonicalId: 'bratwurst', defaultUnit: 'Stück'),
+    IngredientEntry(name: 'Wiener Würstchen', category: 'Fleisch & Fisch', canonicalId: 'wiener', defaultUnit: 'Stück'),
+    IngredientEntry(name: 'Salami', category: 'Fleisch & Fisch', canonicalId: 'salami', defaultUnit: 'g'),
 
     // ──────────────────────────────────────────────────────
     // FISCH & MEERESFRÜCHTE
     // ──────────────────────────────────────────────────────
-    IngredientEntry(name: 'Lachsfilet', category: 'Fleisch & Fisch', canonicalId: 'lachs_filet', defaultUnit: 'g', kcalPer100g: 208, proteinPer100g: 20, fatPer100g: 13, carbsPer100g: 0),
-    IngredientEntry(name: 'Lachs (TK)', category: 'Fleisch & Fisch', canonicalId: 'lachs_tk', defaultUnit: 'g', kcalPer100g: 208, proteinPer100g: 20, fatPer100g: 13, carbsPer100g: 0),
-    IngredientEntry(name: 'Heilbutt (frisch)', category: 'Fleisch & Fisch', canonicalId: 'heilbutt_frisch', defaultUnit: 'g', kcalPer100g: 91, proteinPer100g: 19, fatPer100g: 1.3, carbsPer100g: 0),
-    IngredientEntry(name: 'Kabeljau', category: 'Fleisch & Fisch', canonicalId: 'kabeljau', defaultUnit: 'g', kcalPer100g: 82, proteinPer100g: 18, fatPer100g: 0.7, carbsPer100g: 0),
-    IngredientEntry(name: 'Forelle', category: 'Fleisch & Fisch', canonicalId: 'forelle', defaultUnit: 'Stück', kcalPer100g: 119, proteinPer100g: 20, fatPer100g: 3.5, carbsPer100g: 0),
-    IngredientEntry(name: 'Thunfisch (Dose)', category: 'Fleisch & Fisch', canonicalId: 'thunfisch_dose', defaultUnit: 'Dose', kcalPer100g: 116, proteinPer100g: 26, fatPer100g: 1.0, carbsPer100g: 0),
+    IngredientEntry(name: 'Lachsfilet', category: 'Fleisch & Fisch', canonicalId: 'lachs_filet', defaultUnit: 'g'),
+    IngredientEntry(name: 'Lachs (TK)', category: 'Fleisch & Fisch', canonicalId: 'lachs_tk', defaultUnit: 'g'),
+    IngredientEntry(name: 'Heilbutt (frisch)', category: 'Fleisch & Fisch', canonicalId: 'heilbutt_frisch', defaultUnit: 'g'),
+    IngredientEntry(name: 'Kabeljau', category: 'Fleisch & Fisch', canonicalId: 'kabeljau', defaultUnit: 'g'),
+    IngredientEntry(name: 'Forelle', category: 'Fleisch & Fisch', canonicalId: 'forelle', defaultUnit: 'Stück'),
+    IngredientEntry(name: 'Thunfisch (Dose)', category: 'Fleisch & Fisch', canonicalId: 'thunfisch_dose', defaultUnit: 'Dose'),
     IngredientEntry(name: 'Fischstäbchen (TK)', category: 'Fleisch & Fisch', canonicalId: 'fischstaebchen_tk', defaultUnit: 'Stück'),
     IngredientEntry(name: 'Garnelen', category: 'Fleisch & Fisch', canonicalId: 'garnelen', defaultUnit: 'g', aliases: ['Shrimps', 'Crevetten']),
     IngredientEntry(name: 'Garnelen (TK)', category: 'Fleisch & Fisch', canonicalId: 'garnelen_tk', defaultUnit: 'g'),

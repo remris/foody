@@ -946,7 +946,7 @@ class _ScanNutrientRow extends StatelessWidget {
                 ),
               if (nutrients.carbsPer100g != null)
                 _NutrientChip(
-                  label: 'Carbs',
+                  label: 'Kohlenhydr.',
                   value: '${nutrients.carbsPer100g!.toStringAsFixed(1)}g',
                   color: Colors.blue,
                 ),

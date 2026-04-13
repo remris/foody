@@ -24,6 +24,8 @@ class NutritionProfile {
   final double proteinGoalG;
   final double carbsGoalG;
   final double fatGoalG;
+  final double fiberGoalG;  // DGE-Empfehlung: 30g/Tag
+  final double sugarGoalG;  // WHO-Empfehlung: <50g/Tag
 
   const NutritionProfile({
     required this.age,
@@ -35,6 +37,8 @@ class NutritionProfile {
     required this.proteinGoalG,
     required this.carbsGoalG,
     required this.fatGoalG,
+    this.fiberGoalG = 30.0,
+    this.sugarGoalG = 50.0,
   });
 
   /// Harris-Benedict-Formel → BMR → TDEE → Zielanpassung.
@@ -85,6 +89,8 @@ class NutritionProfile {
       proteinGoalG: proteinG,
       carbsGoalG: carbsG,
       fatGoalG: fatG,
+      fiberGoalG: 30.0,
+      sugarGoalG: 50.0,
     );
   }
 
@@ -98,6 +104,8 @@ class NutritionProfile {
         'proteinGoalG': proteinGoalG,
         'carbsGoalG': carbsGoalG,
         'fatGoalG': fatGoalG,
+        'fiberGoalG': fiberGoalG,
+        'sugarGoalG': sugarGoalG,
       };
 
   factory NutritionProfile.fromJson(Map<String, dynamic> json) {
@@ -113,6 +121,8 @@ class NutritionProfile {
       proteinGoalG: (json['proteinGoalG'] as num).toDouble(),
       carbsGoalG: (json['carbsGoalG'] as num).toDouble(),
       fatGoalG: (json['fatGoalG'] as num).toDouble(),
+      fiberGoalG: (json['fiberGoalG'] as num?)?.toDouble() ?? 30.0,
+      sugarGoalG: (json['sugarGoalG'] as num?)?.toDouble() ?? 50.0,
     );
   }
 
@@ -177,6 +187,7 @@ class NutritionEntry {
   final double carbs;
   final double fat;
   final double fiber;
+  final double sugar;
   final double servings;
   final DateTime loggedAt;
 
@@ -188,6 +199,7 @@ class NutritionEntry {
     required this.carbs,
     required this.fat,
     required this.fiber,
+    this.sugar = 0,
     required this.servings,
     required this.loggedAt,
   });
@@ -200,6 +212,7 @@ class NutritionEntry {
         carbs: (json['carbs'] as num?)?.toDouble() ?? 0,
         fat: (json['fat'] as num?)?.toDouble() ?? 0,
         fiber: (json['fiber'] as num?)?.toDouble() ?? 0,
+        sugar: (json['sugar'] as num?)?.toDouble() ?? 0,
         servings: (json['servings'] as num?)?.toDouble() ?? 1,
         loggedAt: DateTime.tryParse(
                 json['logged_at'] as String? ?? json['created_at'] as String? ?? '') ??
@@ -213,6 +226,7 @@ class NutritionEntry {
         'carbs': carbs,
         'fat': fat,
         'fiber': fiber,
+        'sugar': sugar,
         'servings': servings,
       };
 }
@@ -228,6 +242,7 @@ class DailyNutritionSummary {
   double get totalCarbs => entries.fold(0.0, (s, e) => s + e.carbs);
   double get totalFat => entries.fold(0.0, (s, e) => s + e.fat);
   double get totalFiber => entries.fold(0.0, (s, e) => s + e.fiber);
+  double get totalSugar => entries.fold(0.0, (s, e) => s + e.sugar);
 }
 
 // ── Daily Nutrition Log Provider ──
@@ -296,6 +311,7 @@ class DailyNutritionNotifier extends AsyncNotifier<List<NutritionEntry>> {
       carbs: nutrition.carbs * servings / recipe.servings,
       fat: nutrition.fat * servings / recipe.servings,
       fiber: nutrition.fiber * servings / recipe.servings,
+      sugar: nutrition.sugar * servings / recipe.servings,
       servings: servings,
       loggedAt: DateTime.now(),
     );

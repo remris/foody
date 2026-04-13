@@ -436,7 +436,7 @@ class _InventoryOverviewCard extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return _DashCard(
-      onTap: () => context.go('/inventory'),
+      onTap: () => context.go('/pantry?tab=shopping'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -652,7 +652,7 @@ class _NutritionCard extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 _MacroBar(
-                  label: 'Carbs',
+                  label: 'Kohlenhydr.',
                   value: summary.totalCarbs,
                   target: profile.carbsGoalG,
                   color: Colors.amber.shade700,

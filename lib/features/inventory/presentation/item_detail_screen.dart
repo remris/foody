@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kokomu/core/constants/food_categories.dart';
+import 'package:kokomu/core/data/nutrient_data.dart';
 import 'package:kokomu/features/auth/presentation/auth_provider.dart';
 import 'package:kokomu/features/inventory/presentation/add_inventory_item_sheet.dart';
 import 'package:kokomu/features/inventory/presentation/inventory_provider.dart';
@@ -533,6 +534,29 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
     if (mounted) setState(() => _item = fresh);
   }
 
+  /// Fallback-Nährwerte: erst item.nutrientInfo (Scan), dann Katalog-Lookup.
+  Widget _buildFallbackNutrition(ThemeData theme) {
+    // 1. Gescannte Nährwerte am Item selbst
+    if (_item.nutrientInfo != null && _item.nutrientInfo!.hasData) {
+      return _CatalogNutritionCard(
+        nutrients: _item.nutrientInfo!,
+        theme: theme,
+        isFromScan: true,
+      );
+    }
+    // 2. Katalog-Lookup via nutrient_data.dart
+    final catalogNutrients = getNutrientsForIngredientName(_item.ingredientName);
+    if (catalogNutrients != null && catalogNutrients.hasData) {
+      return _CatalogNutritionCard(
+        nutrients: catalogNutrients,
+        theme: theme,
+        isFromScan: false,
+      );
+    }
+    // 3. Nichts verfügbar
+    return _NoFoodFacts(theme: theme);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -597,9 +621,9 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
             const SizedBox(height: 20),
             detailsAsync.when(
               loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator())),
-              error: (_, __) => _NoFoodFacts(theme: theme),
+              error: (_, __) => _buildFallbackNutrition(theme),
               data: (details) {
-                if (details == null) return _NoFoodFacts(theme: theme);
+                if (details == null) return _buildFallbackNutrition(theme);
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -612,6 +636,9 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
                     if (details.nutriments != null) ...[
                       const SizedBox(height: 16),
                       _NutritionTable(nutriments: details.nutriments!, theme: theme),
+                    ] else ...[
+                      const SizedBox(height: 16),
+                      _buildFallbackNutrition(theme),
                     ],
                     if (details.allergensTags.isNotEmpty) ...[
                       const SizedBox(height: 16),
@@ -985,22 +1012,31 @@ class _NutritionTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rows = <({String label, String value, double ratio, Color color})>[
+    final rows = <({String label, String value, double ratio, Color color, bool isSubItem})>[
       if (nutriments.energyKcal != null)
         (label: 'Kalorien', value: '${nutriments.energyKcal!.round()} kcal',
-            ratio: nutriments.energyKcal! / 2000, color: const Color(0xFFFF7043)),
+            ratio: nutriments.energyKcal! / 2000, color: const Color(0xFFFF7043), isSubItem: false),
       if (nutriments.fat != null)
         (label: 'Fett', value: '${nutriments.fat!.toStringAsFixed(1)} g',
-            ratio: nutriments.fat! / 65, color: const Color(0xFFFFCA28)),
+            ratio: nutriments.fat! / 65, color: const Color(0xFFFFCA28), isSubItem: false),
+      if (nutriments.saturatedFat != null)
+        (label: '  davon gesättigt', value: '${nutriments.saturatedFat!.toStringAsFixed(1)} g',
+            ratio: nutriments.saturatedFat! / 20, color: const Color(0xFFFFCA28), isSubItem: true),
       if (nutriments.carbohydrates != null)
         (label: 'Kohlenhydrate', value: '${nutriments.carbohydrates!.toStringAsFixed(1)} g',
-            ratio: nutriments.carbohydrates! / 300, color: const Color(0xFF42A5F5)),
+            ratio: nutriments.carbohydrates! / 300, color: const Color(0xFF42A5F5), isSubItem: false),
+      if (nutriments.sugars != null)
+        (label: '  davon Zucker', value: '${nutriments.sugars!.toStringAsFixed(1)} g',
+            ratio: nutriments.sugars! / 100, color: const Color(0xFF42A5F5), isSubItem: true),
+      if (nutriments.fiber != null)
+        (label: 'Ballaststoffe', value: '${nutriments.fiber!.toStringAsFixed(1)} g',
+            ratio: nutriments.fiber! / 30, color: const Color(0xFF8D6E63), isSubItem: false),
       if (nutriments.proteins != null)
         (label: 'Eiweiß', value: '${nutriments.proteins!.toStringAsFixed(1)} g',
-            ratio: nutriments.proteins! / 50, color: const Color(0xFFAB47BC)),
+            ratio: nutriments.proteins! / 50, color: const Color(0xFFAB47BC), isSubItem: false),
       if (nutriments.salt != null)
         (label: 'Salz', value: '${nutriments.salt!.toStringAsFixed(2)} g',
-            ratio: nutriments.salt! / 6, color: const Color(0xFF78909C)),
+            ratio: nutriments.salt! / 6, color: const Color(0xFF78909C), isSubItem: false),
     ];
     if (rows.isEmpty) return const SizedBox.shrink();
 
@@ -1009,6 +1045,96 @@ class _NutritionTable extends StatelessWidget {
       children: [
         Text('Nährwerte pro 100g',
             style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text('Quelle: OpenFoodFacts',
+            style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontStyle: FontStyle.italic)),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: rows.map((r) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Expanded(flex: 3, child: Text(r.label,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: r.isSubItem ? theme.colorScheme.onSurfaceVariant : null,
+                          fontSize: r.isSubItem ? 12 : null,
+                        ))),
+                    Expanded(flex: 2, child: Text(r.value,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: r.isSubItem ? theme.colorScheme.onSurfaceVariant : null,
+                          fontSize: r.isSubItem ? 12 : null,
+                        ),
+                        textAlign: TextAlign.right)),
+                    const SizedBox(width: 12),
+                    Expanded(flex: 3, child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: r.ratio.clamp(0.0, 1.0),
+                        backgroundColor: r.color.withValues(alpha: r.isSubItem ? 0.08 : 0.15),
+                        color: r.isSubItem ? r.color.withValues(alpha: 0.5) : r.color,
+                        minHeight: r.isSubItem ? 4 : 6,
+                      ),
+                    )),
+                  ],
+                ),
+              )).toList(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Katalog-Fallback Nährwert-Card (ohne Barcode-Scan) ────────────────────────
+
+class _CatalogNutritionCard extends StatelessWidget {
+  final IngredientNutrients nutrients;
+  final ThemeData theme;
+  final bool isFromScan;
+  const _CatalogNutritionCard({required this.nutrients, required this.theme, required this.isFromScan});
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <({String label, String value, double ratio, Color color})>[
+      if (nutrients.kcalPer100g != null)
+        (label: 'Kalorien', value: '${nutrients.kcalPer100g!.round()} kcal',
+            ratio: nutrients.kcalPer100g! / 2000, color: const Color(0xFFFF7043)),
+      if (nutrients.fatPer100g != null)
+        (label: 'Fett', value: '${nutrients.fatPer100g!.toStringAsFixed(1)} g',
+            ratio: nutrients.fatPer100g! / 65, color: const Color(0xFFFFCA28)),
+      if (nutrients.carbsPer100g != null)
+        (label: 'Kohlenhydrate', value: '${nutrients.carbsPer100g!.toStringAsFixed(1)} g',
+            ratio: nutrients.carbsPer100g! / 300, color: const Color(0xFF42A5F5)),
+      if (nutrients.proteinPer100g != null)
+        (label: 'Eiweiß', value: '${nutrients.proteinPer100g!.toStringAsFixed(1)} g',
+            ratio: nutrients.proteinPer100g! / 50, color: const Color(0xFFAB47BC)),
+      if (nutrients.fiberPer100g != null)
+        (label: 'Ballaststoffe', value: '${nutrients.fiberPer100g!.toStringAsFixed(1)} g',
+            ratio: nutrients.fiberPer100g! / 30, color: const Color(0xFF8D6E63)),
+      if (nutrients.saltPer100g != null)
+        (label: 'Salz', value: '${nutrients.saltPer100g!.toStringAsFixed(2)} g',
+            ratio: nutrients.saltPer100g! / 6, color: const Color(0xFF78909C)),
+    ];
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Nährwerte pro 100g',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text(
+          isFromScan ? 'Quelle: Barcode-Scan' : '~Schätzwerte aus Katalog',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: isFromScan ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
         const SizedBox(height: 12),
         Card(
           child: Padding(

@@ -3,7 +3,9 @@ class IngredientNutrients {
   final double? kcalPer100g;
   final double? proteinPer100g;
   final double? fatPer100g;
+  final double? saturatedFatPer100g;
   final double? carbsPer100g;
+  final double? sugarPer100g;
   final double? fiberPer100g;
   final double? saltPer100g;
 
@@ -11,7 +13,9 @@ class IngredientNutrients {
     this.kcalPer100g,
     this.proteinPer100g,
     this.fatPer100g,
+    this.saturatedFatPer100g,
     this.carbsPer100g,
+    this.sugarPer100g,
     this.fiberPer100g,
     this.saltPer100g,
   });
@@ -27,7 +31,9 @@ class IngredientNutrients {
         kcalPer100g: (json['kcal_100g'] as num?)?.toDouble(),
         proteinPer100g: (json['protein_100g'] as num?)?.toDouble(),
         fatPer100g: (json['fat_100g'] as num?)?.toDouble(),
+        saturatedFatPer100g: (json['saturated_fat_100g'] as num?)?.toDouble(),
         carbsPer100g: (json['carbs_100g'] as num?)?.toDouble(),
+        sugarPer100g: (json['sugar_100g'] as num?)?.toDouble(),
         fiberPer100g: (json['fiber_100g'] as num?)?.toDouble(),
         saltPer100g: (json['salt_100g'] as num?)?.toDouble(),
       );
@@ -36,7 +42,9 @@ class IngredientNutrients {
         'kcal_100g': kcalPer100g,
         'protein_100g': proteinPer100g,
         'fat_100g': fatPer100g,
+        'saturated_fat_100g': saturatedFatPer100g,
         'carbs_100g': carbsPer100g,
+        'sugar_100g': sugarPer100g,
         'fiber_100g': fiberPer100g,
         'salt_100g': saltPer100g,
       };
@@ -48,7 +56,9 @@ class IngredientNutrients {
       kcalPer100g: kcalPer100g != null ? kcalPer100g! * factor : null,
       proteinPer100g: proteinPer100g != null ? proteinPer100g! * factor : null,
       fatPer100g: fatPer100g != null ? fatPer100g! * factor : null,
+      saturatedFatPer100g: saturatedFatPer100g != null ? saturatedFatPer100g! * factor : null,
       carbsPer100g: carbsPer100g != null ? carbsPer100g! * factor : null,
+      sugarPer100g: sugarPer100g != null ? sugarPer100g! * factor : null,
       fiberPer100g: fiberPer100g != null ? fiberPer100g! * factor : null,
       saltPer100g: saltPer100g != null ? saltPer100g! * factor : null,
     );

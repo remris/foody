@@ -49,7 +49,9 @@ class ScannerRepositoryImpl implements ScannerRepository {
         final kcal = (nutriments['energy-kcal_100g'] as num?)?.toDouble();
         final protein = (nutriments['proteins_100g'] as num?)?.toDouble();
         final fat = (nutriments['fat_100g'] as num?)?.toDouble();
+        final saturatedFat = (nutriments['saturated-fat_100g'] as num?)?.toDouble();
         final carbs = (nutriments['carbohydrates_100g'] as num?)?.toDouble();
+        final sugar = (nutriments['sugars_100g'] as num?)?.toDouble();
         final fiber = (nutriments['fiber_100g'] as num?)?.toDouble();
         final salt = (nutriments['salt_100g'] as num?)?.toDouble();
 
@@ -58,7 +60,9 @@ class ScannerRepositoryImpl implements ScannerRepository {
             kcalPer100g: kcal,
             proteinPer100g: protein,
             fatPer100g: fat,
+            saturatedFatPer100g: saturatedFat,
             carbsPer100g: carbs,
+            sugarPer100g: sugar,
             fiberPer100g: fiber,
             saltPer100g: salt,
           );

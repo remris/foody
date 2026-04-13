@@ -19,6 +19,7 @@ class NutritionInfo {
   final double carbs;
   final double fat;
   final double fiber;
+  final double sugar;
 
   const NutritionInfo({
     required this.calories,
@@ -26,6 +27,7 @@ class NutritionInfo {
     required this.carbs,
     required this.fat,
     required this.fiber,
+    this.sugar = 0,
   });
 
   factory NutritionInfo.fromJson(Map<String, dynamic> json) => NutritionInfo(
@@ -34,6 +36,7 @@ class NutritionInfo {
         carbs: (json['carbs'] as num?)?.toDouble() ?? 0,
         fat: (json['fat'] as num?)?.toDouble() ?? 0,
         fiber: (json['fiber'] as num?)?.toDouble() ?? 0,
+        sugar: (json['sugar'] as num?)?.toDouble() ?? 0,
       );
 
   Map<String, dynamic> toJson() => {
@@ -42,6 +45,7 @@ class NutritionInfo {
         'carbs': carbs,
         'fat': fat,
         'fiber': fiber,
+        'sugar': sugar,
       };
 }
 

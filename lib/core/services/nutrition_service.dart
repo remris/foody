@@ -1,4 +1,5 @@
 import 'package:kokomu/core/data/ingredient_catalog.dart';
+import 'package:kokomu/core/data/nutrient_data.dart';
 
 /// Nährwert-Datensatz pro 100g.
 class NutritionInfo {
@@ -163,16 +164,19 @@ class NutritionService {
       return _manualNutrition[key];
     }
 
-    // 3. Katalog-Fallback (explizite Nährwerte)
+    // 3. Katalog-Fallback (Nährwerte aus nutrient_data.dart)
     final catalogEntry = IngredientCatalog.findByName(ingredientName);
-    if (catalogEntry != null && catalogEntry.hasNutrition) {
-      return NutritionInfo(
-        kcalPer100g: catalogEntry.kcalPer100g!,
-        proteinPer100g: catalogEntry.proteinPer100g!,
-        fatPer100g: catalogEntry.fatPer100g!,
-        carbsPer100g: catalogEntry.carbsPer100g!,
-        source: NutritionSource.catalog,
-      );
+    if (catalogEntry != null) {
+      final catalogNutrients = getNutrientsForCatalogEntry(catalogEntry);
+      if (catalogNutrients != null && catalogNutrients.hasData) {
+        return NutritionInfo(
+          kcalPer100g: catalogNutrients.kcalPer100g ?? 0,
+          proteinPer100g: catalogNutrients.proteinPer100g ?? 0,
+          fatPer100g: catalogNutrients.fatPer100g ?? 0,
+          carbsPer100g: catalogNutrients.carbsPer100g ?? 0,
+          source: NutritionSource.catalog,
+        );
+      }
     }
 
     // 4. Kategorie-Fallback (geschätzte Durchschnittswerte)
